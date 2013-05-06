@@ -1,7 +1,7 @@
 /**
- * (c) 2012 uchicom
+ * (c) 2013 uchicom
  */
-package com.uchicom.pop3;
+package com.uchicom.dirpop3;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,25 +9,28 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * マルチスレッドのPOP3サーバー.
- * new Threadを実施している.
+ * スレッドプールを使用.
  * @author Uchiyama Shigeki
  *
  */
-public class MultiPop3Server extends SinglePop3Server implements Runnable {
+public class PoolPop3Server extends SinglePop3Server implements Runnable {
 
     
     protected Socket socket;
+    protected int pool;
     /**
      * アドレスとメールユーザーフォルダの格納フォルダを指定する
      * 
      * @param args
      */
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.out.println("args.length != 2");
+        if (args.length < 2) {
+            System.out.println("args.length < 2");
             return;
         }
         // メールフォルダ格納フォルダ
@@ -39,7 +42,7 @@ public class MultiPop3Server extends SinglePop3Server implements Runnable {
 
         // メール
         String hostName = args[1];
-
+        
         // ポート
         int port = 8115;
         if (args.length > 2) {
@@ -47,17 +50,22 @@ public class MultiPop3Server extends SinglePop3Server implements Runnable {
         } 
         // 接続待ち数
         int back = 10;
-        if (args.length == 3) {
+        if (args.length > 3) {
             back = Integer.parseInt(args[3]);
         }
+        // スレッドプール数
+        int pool = 10;
+        if (args.length > 4) {
+            pool = Integer.parseInt(args[3]);
+        }
 
-        execute(hostName, file, port, back);
-        
+        execute(hostName, file, port, back, pool);
         
 
     }
+  
     
-    public MultiPop3Server(String hostName, File file, Socket socket) {
+    public PoolPop3Server(String hostName, File file, Socket socket) {
         super(hostName, file);
         this.socket = socket;
     }
@@ -65,32 +73,39 @@ public class MultiPop3Server extends SinglePop3Server implements Runnable {
     /** メイン処理
      * 
      */
-    private static void execute(String hostName, File file, int port, int back) {
+    private static void execute(String hostName, File file, int port, int back, int pool) {
+
+        ExecutorService exec = null;
         ServerSocket server = null;
         try {
             server = new ServerSocket();
             server.setReuseAddress(true);
-            server.bind(new InetSocketAddress(8115), 10);
+            server.bind(new InetSocketAddress(port), back);
             serverQueue.add(server);
+
+            exec = Executors.newFixedThreadPool(pool);
             while (true) {
+                // サーバーのあくせぷと実施(サーバは一個だからいいけど。
                 Socket socket = server.accept();
                 System.out.println(format.format(new Date()) + ":"
                         + String.valueOf(socket.getRemoteSocketAddress()));
-                new Thread(new MultiPop3Server(hostName, file, socket)).start();
+                //ここの動きが微妙に違う
+                exec.execute(new PoolPop3Server(hostName, file, socket));
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            synchronized (server) {
-                if (server != null) {
-                    try {
-                        server.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        server = null;
-                    }
+            if (server != null) {
+                try {
+                    server.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    server = null;
                 }
+            }
+            if (exec != null) {
+                exec.shutdownNow();
             }
         }
     }

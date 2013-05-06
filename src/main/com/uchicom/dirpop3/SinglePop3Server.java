@@ -1,7 +1,7 @@
 /**
  * (c) 2012 uchicom
  */
-package com.uchicom.pop3;
+package com.uchicom.dirpop3;
 
 import java.io.BufferedReader;
 import java.io.File;
