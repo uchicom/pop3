@@ -3,12 +3,18 @@
  */
 package com.uchicom.dirpop3;
 
+import java.io.File;
+
 /**
  * POP3に関する定数クラス
  * @author Uchiyama Shigeki
  * 
  */
 public class Pop3Static {
+    
+    /** デバッグフラグ */
+
+    public static final boolean DEBUG = true;
 
 	// POP3返却メッセージ
 	/** 返却メッセージ(+OK) */
@@ -72,4 +78,10 @@ public class Pop3Static {
 
 	/** パスワードファイルのパス */
 	public static String PASSWORD_FILE_NAME = "pass.txt";
+	
+	//初期設定
+    public static File DEFAULT_MAILBOX = new File("mailbox"); 
+    public static int DEFAULT_PORT = 8110;
+	public static int DEFAULT_BACK = 10;
+	public static int DEFAULT_POOL = 10;
 }

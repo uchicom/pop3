@@ -29,37 +29,42 @@ public class PoolServer extends SingleServer implements Runnable {
      * @param args
      */
     public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("args.length < 2");
+
+        if (args.length < 1) {
+            System.out.println("args.length < 1");
             return;
         }
         // メールフォルダ格納フォルダ
-        File file = new File(args[0]);
-        if (!file.exists() || !file.isDirectory()) {
+        File base = Pop3Static.DEFAULT_MAILBOX;
+
+        if (args.length > 1) {
+            base = new File(args[0]);
+        }
+        if (!base.exists() || !base.isDirectory()) {
             System.out.println("mailbox directory is not found.");
             return;
         }
 
         // メール
         String hostName = args[1];
-        
+
         // ポート
-        int port = 8115;
+        int port = Pop3Static.DEFAULT_PORT;
         if (args.length > 2) {
             port = Integer.parseInt(args[2]);
         } 
         // 接続待ち数
-        int back = 10;
-        if (args.length > 3) {
+        int back =  Pop3Static.DEFAULT_BACK;
+        if (args.length == 3) {
             back = Integer.parseInt(args[3]);
         }
         // スレッドプール数
-        int pool = 10;
+        int pool = Pop3Static.DEFAULT_POOL;
         if (args.length > 4) {
             pool = Integer.parseInt(args[3]);
         }
 
-        execute(hostName, file, port, back, pool);
+        execute(hostName, base, port, back, pool);
         
 
     }
@@ -87,7 +92,7 @@ public class PoolServer extends SingleServer implements Runnable {
             while (true) {
                 // サーバーのあくせぷと実施(サーバは一個だからいいけど。
                 Socket socket = server.accept();
-                System.out.println(format.format(new Date()) + ":"
+                if (Pop3Static.DEBUG) System.out.println(format.format(new Date()) + ":"
                         + String.valueOf(socket.getRemoteSocketAddress()));
                 //ここの動きが微妙に違う
                 exec.execute(new PoolServer(hostName, file, socket));

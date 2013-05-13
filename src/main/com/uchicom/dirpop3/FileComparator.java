@@ -13,6 +13,7 @@ import java.util.Comparator;
  */
 public class FileComparator implements Comparator<File> {
 
+    protected static final FileComparator instance = new FileComparator();
     /* (non-Javadoc)
      * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
      */

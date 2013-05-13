@@ -26,13 +26,17 @@ public class MultiServer extends SingleServer implements Runnable {
      * @param args
      */
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.out.println("args.length != 2");
+        if (args.length < 1) {
+            System.out.println("args.length < 1");
             return;
         }
         // メールフォルダ格納フォルダ
-        File file = new File(args[0]);
-        if (!file.exists() || !file.isDirectory()) {
+        File base = Pop3Static.DEFAULT_MAILBOX;
+
+        if (args.length > 1) {
+            base = new File(args[0]);
+        }
+        if (!base.exists() || !base.isDirectory()) {
             System.out.println("mailbox directory is not found.");
             return;
         }
@@ -41,17 +45,17 @@ public class MultiServer extends SingleServer implements Runnable {
         String hostName = args[1];
 
         // ポート
-        int port = 8115;
+        int port = Pop3Static.DEFAULT_PORT;
         if (args.length > 2) {
             port = Integer.parseInt(args[2]);
         } 
         // 接続待ち数
-        int back = 10;
+        int back =  Pop3Static.DEFAULT_BACK;
         if (args.length == 3) {
             back = Integer.parseInt(args[3]);
         }
 
-        execute(hostName, file, port, back);
+        execute(hostName, base, port, back);
         
         
 
@@ -70,11 +74,11 @@ public class MultiServer extends SingleServer implements Runnable {
         try {
             server = new ServerSocket();
             server.setReuseAddress(true);
-            server.bind(new InetSocketAddress(8115), 10);
+            server.bind(new InetSocketAddress(port), back);
             serverQueue.add(server);
             while (true) {
                 Socket socket = server.accept();
-                System.out.println(format.format(new Date()) + ":"
+                if (Pop3Static.DEBUG) System.out.println(format.format(new Date()) + ":"
                         + String.valueOf(socket.getRemoteSocketAddress()));
                 new Thread(new MultiServer(hostName, file, socket)).start();
             }

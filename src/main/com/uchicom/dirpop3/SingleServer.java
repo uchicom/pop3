@@ -35,22 +35,10 @@ public class SingleServer {
 	/** ファイルとUIDLで使用する日時フォーマット */
 	public static final SimpleDateFormat format = new SimpleDateFormat(
 			Pop3Static.DATE_TIME_MILI_FORMAT);
-	
-	/** 実行モード(デフォルト：シングルスレッドモード) */
-	public static int EXEC_MODE = 0;
-	
-	/** シングルスレッドモード */
-	public static final int EXEC_SINGLE_THREAD = 0;
-	
-	/** マルチスレッドモード */
-	public static final int EXEC_MULTI_THREAD = 1;
-	
-	/** チャンネルモード */
-	public static final int EXEC_CHANNEL = 2;
 
 	protected static Queue<ServerSocket> serverQueue = new ConcurrentLinkedQueue<ServerSocket>();
 	protected String hostName;
-	protected  File file;
+	protected File base;
 	protected int port;
 	protected int back;
 	protected FileComparator comparator = new FileComparator();
@@ -60,13 +48,17 @@ public class SingleServer {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		if (args.length != 2) {
-			System.out.println("args.length != 2");
+		if (args.length < 1) {
+			System.out.println("args.length < 1");
 			return;
 		}
 		// メールフォルダ格納フォルダ
-		File file = new File(args[0]);
-		if (!file.exists() || !file.isDirectory()) {
+		File base = Pop3Static.DEFAULT_MAILBOX;
+
+        if (args.length > 1) {
+		    base = new File(args[0]);
+        }
+		if (!base.exists() || !base.isDirectory()) {
 			System.out.println("mailbox directory is not found.");
 			return;
 		}
@@ -75,17 +67,17 @@ public class SingleServer {
 		String hostName = args[1];
 
         // ポート
-        int port = 8115;
+        int port = Pop3Static.DEFAULT_PORT;
         if (args.length > 2) {
             port = Integer.parseInt(args[2]);
         } 
         // 接続待ち数
-        int back = 10;
+        int back =  Pop3Static.DEFAULT_BACK;
         if (args.length == 3) {
             back = Integer.parseInt(args[3]);
         }
         
-		execute(hostName, file, port, back);
+		execute(hostName, base, port, back);
 		
 
 	}
@@ -95,9 +87,9 @@ public class SingleServer {
 	 * @param hostName
 	 * @param file
 	 */
-    public SingleServer(String hostName, File file) {
+    public SingleServer(String hostName, File base) {
         this.hostName = hostName;
-        this.file = file;
+        this.base = base;
     }
 	/** メイン処理
 	 * 
@@ -113,8 +105,10 @@ public class SingleServer {
             SingleServer smtpServer = new SingleServer(hostName, file);
             while (true) {
                 Socket socket = server.accept();
-                System.out.println(format.format(new Date()) + ":"
-                        + String.valueOf(socket.getRemoteSocketAddress()));
+                if (Pop3Static.DEBUG) {
+                    System.out.println(format.format(new Date()) + ":"
+                            + String.valueOf(socket.getRemoteSocketAddress()));
+                }
                 smtpServer.pop3(socket);
             }
         } catch (IOException e) {
@@ -140,7 +134,7 @@ public class SingleServer {
 	 */
 	public void pop3(Socket socket) {
 
-        System.out.println(format.format(new Date()) + ":"
+        if (Pop3Static.DEBUG) System.out.println(format.format(new Date()) + ":"
                 + String.valueOf(socket.getRemoteSocketAddress()));
         // 0.はプロセスごとに変える番号だけど、とくに複数プロセスを持っていないので。
         String timestamp = "<" +Thread.currentThread().getId() + "." + System.currentTimeMillis() + "@" + hostName
@@ -182,7 +176,7 @@ public class SingleServer {
                         pass = head.split(" ")[1];
                         // ユーザーチェック
                         boolean existUser = false;
-                        for (File box : file.listFiles()) {
+                        for (File box : base.listFiles()) {
                             if (box.isDirectory()) {
                                 if (user.equals(box.getName())) {
                                     userBox = box;
@@ -533,7 +527,7 @@ public class SingleServer {
                         String digest = heads[2];
                         // ユーザーチェック
                         boolean existUser = false;
-                        for (File box : file.listFiles()) {
+                        for (File box : base.listFiles()) {
                             if (box.isDirectory()) {
                                 if (user.equals(box.getName())) {
                                     userBox = box;
