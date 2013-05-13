@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author Uchiyama Shigeki
  * 
  */
-public class SinglePop3Server {
+public class SingleServer {
 
 	/** ファイルとUIDLで使用する日時フォーマット */
 	public static final SimpleDateFormat format = new SimpleDateFormat(
@@ -95,7 +95,7 @@ public class SinglePop3Server {
 	 * @param hostName
 	 * @param file
 	 */
-    public SinglePop3Server(String hostName, File file) {
+    public SingleServer(String hostName, File file) {
         this.hostName = hostName;
         this.file = file;
     }
@@ -110,7 +110,7 @@ public class SinglePop3Server {
             server.bind(new InetSocketAddress(port), back);
             serverQueue.add(server);
             
-            SinglePop3Server smtpServer = new SinglePop3Server(hostName, file);
+            SingleServer smtpServer = new SingleServer(hostName, file);
             while (true) {
                 Socket socket = server.accept();
                 System.out.println(format.format(new Date()) + ":"

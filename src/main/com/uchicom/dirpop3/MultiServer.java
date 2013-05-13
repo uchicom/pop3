@@ -16,7 +16,7 @@ import java.util.Date;
  * @author Uchiyama Shigeki
  *
  */
-public class MultiPop3Server extends SinglePop3Server implements Runnable {
+public class MultiServer extends SingleServer implements Runnable {
 
     
     protected Socket socket;
@@ -57,7 +57,7 @@ public class MultiPop3Server extends SinglePop3Server implements Runnable {
 
     }
     
-    public MultiPop3Server(String hostName, File file, Socket socket) {
+    public MultiServer(String hostName, File file, Socket socket) {
         super(hostName, file);
         this.socket = socket;
     }
@@ -76,7 +76,7 @@ public class MultiPop3Server extends SinglePop3Server implements Runnable {
                 Socket socket = server.accept();
                 System.out.println(format.format(new Date()) + ":"
                         + String.valueOf(socket.getRemoteSocketAddress()));
-                new Thread(new MultiPop3Server(hostName, file, socket)).start();
+                new Thread(new MultiServer(hostName, file, socket)).start();
             }
         } catch (IOException e) {
             e.printStackTrace();

@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  * @author Uchiyama Shigeki
  *
  */
-public class PoolPop3Server extends SinglePop3Server implements Runnable {
+public class PoolServer extends SingleServer implements Runnable {
 
     
     protected Socket socket;
@@ -65,7 +65,7 @@ public class PoolPop3Server extends SinglePop3Server implements Runnable {
     }
   
     
-    public PoolPop3Server(String hostName, File file, Socket socket) {
+    public PoolServer(String hostName, File file, Socket socket) {
         super(hostName, file);
         this.socket = socket;
     }
@@ -90,7 +90,7 @@ public class PoolPop3Server extends SinglePop3Server implements Runnable {
                 System.out.println(format.format(new Date()) + ":"
                         + String.valueOf(socket.getRemoteSocketAddress()));
                 //ここの動きが微妙に違う
-                exec.execute(new PoolPop3Server(hostName, file, socket));
+                exec.execute(new PoolServer(hostName, file, socket));
             }
         } catch (IOException e) {
             e.printStackTrace();
