@@ -49,7 +49,7 @@ public class SingleServer {
 	 */
 	public static void main(String[] args) {
 		if (args.length < 1) {
-			System.out.println("args.length < 1");
+			System.err.println("args.length < 1");
 			return;
 		}
 		// メールフォルダ格納フォルダ
@@ -59,7 +59,7 @@ public class SingleServer {
 		    base = new File(args[0]);
         }
 		if (!base.exists() || !base.isDirectory()) {
-			System.out.println("mailbox directory is not found.");
+			System.err.println("mailbox directory is not found.");
 			return;
 		}
 
