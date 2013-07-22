@@ -21,29 +21,46 @@ import java.util.List;
 
 
 /**
+ * 出力時に一度全てバッファに溜め込むので負荷があがってしまう。
+ * 随時書き込むようにしないといけない。
  * @author uchicom: Shigeki Uchiyama
  *
  */
 public class Pop3Handler implements Handler {
 
+    /** 出力用の文字列バッファ */
     StringBuffer strBuff = new StringBuffer();
-    StringBuffer cmdBuff = new StringBuffer();
+    /** ダイジェスト用の変数 */
     String timestamp;
 
     // ユーザーコマンドでユーザーが設定されたかどうかのフラグ
+    /** ユーザー設定済みフラグ */
     boolean bUser;
     // 認証が許可されたかどうかのフラグ
+    /** 認証済みフラグ */
     boolean bPass;
+    
+    /** ユーザー名 */
     String user;
+    /** パスワード */
     String pass;
+    /** ベースディレクトリ */
     File base;
+    /** ユーザーメールボックス */
     File userBox;
     // メールbox内にあるメールリスト(PASSコマンド時に認証が許可されると設定される)
+    /** メールボックス内のリスト */
     List<File> mailList;
     // DELEコマンド時に指定したメールが格納される(PASSコマンド時に認証が許可されると設定される)
+    /** 削除リスト */
     List<File> delList;
     ByteBuffer readBuff = ByteBuffer.allocate(128);
-    
+
+    /**
+     * 設定を保持するコンストラクタ.
+     * @param base
+     * @param hostName
+     */
     public Pop3Handler(File base, String hostName) {
         this.base = base;
         timestamp = "<" +Thread.currentThread().getId() + "." + System.currentTimeMillis() + "@" + hostName + ">";
@@ -106,26 +123,46 @@ public class Pop3Handler implements Handler {
         if (key.isWritable() && strBuff.length() > 0) {
             //初回の出力を実施
             channel.write(ByteBuffer.wrap(strBuff.toString().getBytes()));
+            //書き込み処理が終わっていないかを確認する。
+            //処理が途中の場合は途中から実施する。
             strBuff.setLength(0);
             key.interestOps(SelectionKey.OP_READ);
         }
     }
     
+    /**
+     * コマンド行が入力されたかどうかチェックする.
+     * @return
+     */
     public boolean checkCmd() {
         String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
         return line.indexOf("\r\n") >= 0;
     }
+    /**
+     * コマンド行から文字列を取得する.
+     * \r\nは除外する.
+     * @return
+     */
     public String getCmd() {
         String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
         return line.substring(0, line.indexOf("\r\n"));
     }
     
+    /**
+     * USERコマンド.
+     * @param line
+     */
     public void user(String line) {
         bUser = true;
         user = line.split(" ")[1];
         strBuff.append(Pop3Static.RECV_OK_LINE_END);
     }
     
+    /**
+     * PASS コマンド.
+     * @param line
+     * @throws IOException
+     */
     public void pass(String line) throws IOException {
         if (bUser && !bPass) {
             pass = line.split(" ")[1];
@@ -206,7 +243,11 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
-    
+
+    /**
+     * STATコマンド.
+     * @param line
+     */
     public void stat(String line) {
         if (bPass) {
             // 簡易一覧表示
@@ -228,6 +269,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * LIST コマンド.
+     * @param line
+     */
     public void list(String line) {
         if (bPass) {
             // リスト表示
@@ -247,6 +292,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * LIST メッセージ番号 コマンド.
+     * @param line
+     */
     public void listNum(String line) {
         if (bPass) {
             // 指定番号のリスト表示
@@ -272,6 +321,11 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * RETR コマンド.
+     * @param line
+     * @throws IOException
+     */
     public void retr(String line) throws IOException {
         if (bPass) {
             strBuff.append(Pop3Static.RECV_OK_LINE_END);
@@ -297,6 +351,11 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * RETR メッセージ番号コマンド.
+     * @param line
+     * @throws IOException
+     */
     public void retrNum(String line) throws IOException {
         if (bPass) {
             String[] lines = line.split(" ");
@@ -332,6 +391,11 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    
+    /**
+     * DELE コマンド.
+     * @param line
+     */
     public void deleNum(String line) {
         if (bPass) {
             // 削除処理
@@ -350,6 +414,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * RSET コマンド.
+     * @param line
+     */
     public void rset(String line) {
      // リセット
         if (bPass) {
@@ -361,6 +429,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * QUIT コマンド.
+     * @param line
+     */
     public void quit(String line) {
         if (delList != null) {
             // 消去マークの入ったファイルを削除する
@@ -370,10 +442,18 @@ public class Pop3Handler implements Handler {
         }
         strBuff.append(Pop3Static.RECV_OK_LINE_END);
     }
+    /**
+     * NOOP コマンド.
+     */
     public void noop(String line) {
 
         // 何もしない
     }
+    /**
+     * TOP メッセージ番号 行数 コマンド.
+     * @param line
+     * @throws IOException
+     */
     public void topNumNum(String line) throws IOException {
         if (bPass) {
             // TRANSACTION 状態でのみ許可される
@@ -410,6 +490,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
         }
     }
+    /**
+     * UIDL コマンド.
+     * @param line
+     */
     public void uidl(String line) {
         if (bPass) {
             // TRANSACTION 状態でのみ許可される
@@ -440,6 +524,10 @@ public class Pop3Handler implements Handler {
         }
     }
 
+    /**
+     * UIDL メッセージ番号 コマンド.
+     * @param line
+     */
     public void uidlNum(String line) {
         if (bPass) {
             // TRANSACTION 状態でのみ許可される
@@ -476,6 +564,12 @@ public class Pop3Handler implements Handler {
         }
     }
     
+    /**
+     * APOP ユーザー名 ダイジェスト コマンド.
+     * @param line
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
     public void apopNameDigest(String line) throws IOException, NoSuchAlgorithmException {
         if (!bPass) {
             String[] lines = line.split(" ");

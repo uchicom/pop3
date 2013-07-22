@@ -80,8 +80,12 @@ public class Pop3Static {
 	public static String PASSWORD_FILE_NAME = "pass.txt";
 	
 	//初期設定
-    public static File DEFAULT_MAILBOX = new File("mailbox"); 
+	/** デフォルトメールボックスディレクトリ */
+    public static File DEFAULT_MAILBOX = new File("mailbox");
+    /** デフォルト待ち受けポート番号 */
     public static int DEFAULT_PORT = 8110;
+    /** デフォルト接続待ち数 */
 	public static int DEFAULT_BACK = 10;
+	/** デフォルトスレッドプール数 */
 	public static int DEFAULT_POOL = 10;
 }
