@@ -51,7 +51,7 @@ public class MultiServer extends SingleServer implements Runnable {
         } 
         // 接続待ち数
         int back =  Pop3Static.DEFAULT_BACK;
-        if (args.length == 3) {
+        if (args.length > 3) {
             back = Integer.parseInt(args[3]);
         }
 

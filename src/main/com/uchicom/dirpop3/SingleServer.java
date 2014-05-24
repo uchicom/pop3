@@ -434,12 +434,18 @@ public class SingleServer {
                                 String readLine = passReader.readLine();
                                 int maxRow = Integer.parseInt(heads[2]);
                                 int row = 0;
-                                while (readLine != null && row < maxRow) {
+                                boolean messageHead = true;
+                                while (readLine != null && (messageHead || row < maxRow)) {
                                     ps.print(readLine);
                                     ps.print(Pop3Static.RECV_LINE_END);
                                     ps.flush();
                                     readLine = passReader.readLine();
-                                    row++;
+                                    if (!messageHead) {
+                                        row++;
+                                    }
+                                    if ("".equals(readLine)) {
+                                        messageHead = false;
+                                    }
                                 }
                                 ps.print(Pop3Static.RECV_DATA_END);
                                 passReader.close();
