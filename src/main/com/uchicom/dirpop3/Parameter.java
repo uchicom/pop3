@@ -33,7 +33,7 @@ public class Parameter {
             return false;
         }
         // メールフォルダ格納フォルダ
-        File base = Pop3Static.DEFAULT_MAILBOX;
+        base = Pop3Static.DEFAULT_MAILBOX;
 
         if (args.length > 1) {
             base = new File(args[0]);
