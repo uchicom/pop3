@@ -55,7 +55,7 @@ public class PoolServer extends SingleServer implements Runnable {
         } 
         // 接続待ち数
         int back =  Pop3Static.DEFAULT_BACK;
-        if (args.length == 3) {
+        if (args.length > 3) {
             back = Integer.parseInt(args[3]);
         }
         // スレッドプール数
@@ -99,19 +99,17 @@ public class PoolServer extends SingleServer implements Runnable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (server != null) {
-                try {
-                    server.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    server = null;
-                }
+        }
+        if (server != null) {
+            try {
+                server.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            if (exec != null) {
-                exec.shutdownNow();
-            }
+            server = null;
+        }
+        if (exec != null) {
+            exec.shutdownNow();
         }
     }
     

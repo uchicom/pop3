@@ -73,7 +73,7 @@ public class SingleServer {
         } 
         // 接続待ち数
         int back =  Pop3Static.DEFAULT_BACK;
-        if (args.length == 3) {
+        if (args.length > 3) {
             back = Integer.parseInt(args[3]);
         }
         
@@ -113,17 +113,16 @@ public class SingleServer {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            synchronized (server) {
-                if (server != null) {
-                    try {
-                        server.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        server = null;
-                    }
+        }
+        
+        synchronized (server) {
+            if (server != null) {
+                try {
+                    server.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+                server = null;
             }
         }
 	}
@@ -626,31 +625,29 @@ public class SingleServer {
             e.printStackTrace();
         } catch (Throwable e) {
             e.printStackTrace();
-        } finally {
-            if (ps != null) {
+        }
+        if (ps != null) {
+            try {
+                ps.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (br != null) {
+            try {
+                br.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        synchronized (socket) {
+            if (socket != null) {
                 try {
-                    ps.close();
+                    socket.close();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            synchronized (socket) {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        socket = null;
-                    }
-                }
+                socket = null;
             }
         }
 	}

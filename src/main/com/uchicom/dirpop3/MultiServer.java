@@ -84,17 +84,15 @@ public class MultiServer extends SingleServer implements Runnable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            synchronized (server) {
-                if (server != null) {
-                    try {
-                        server.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        server = null;
-                    }
+        }
+        synchronized (server) {
+            if (server != null) {
+                try {
+                    server.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+                server = null;
             }
         }
     }
