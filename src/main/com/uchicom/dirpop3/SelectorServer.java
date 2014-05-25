@@ -3,7 +3,6 @@
  */
 package com.uchicom.dirpop3;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
@@ -28,54 +27,27 @@ public class SelectorServer {
      * @param args
      */
     public static void main(String[] args) {
-        if (args.length < 1) {
-            System.err.println("args.length < 1");
-            return;
+        Parameter param = new Parameter(args);
+        if (param.init(System.err)) {
+            execute(param);
         }
-        // メールフォルダ格納フォルダ
-        File base = Pop3Static.DEFAULT_MAILBOX;
-
-        if (args.length > 1) {
-            base = new File(args[0]);
-        }
-        if (!base.exists() || !base.isDirectory()) {
-            System.err.println("mailbox directory is not found.");
-            return;
-        }
-
-        // メール
-        String hostName = args[1];
-
-        // ポート
-        int port = Pop3Static.DEFAULT_PORT;
-        if (args.length > 2) {
-            port = Integer.parseInt(args[2]);
-        } 
-        // 接続待ち数
-        int back =  Pop3Static.DEFAULT_BACK;
-        if (args.length == 3) {
-            back = Integer.parseInt(args[3]);
-        }
-        
-        execute(hostName, base, port, back);
-
     }
     private static boolean alive = true;
     
     /** メイン処理
      * 
      */
-    private static void execute(String hostName, File base, int port, int back) {
+    private static void execute(Parameter param) {
         ServerSocketChannel server = null;
         try {
             server = ServerSocketChannel.open();
             server.socket().setReuseAddress(true);
-            server.socket().bind(new InetSocketAddress(port), back);
+            server.socket().bind(new InetSocketAddress(param.getPort()), param.getBack());
             server.configureBlocking(false);
             serverQueue.add(server);
             
             Selector selector = Selector.open();
-            server.register(selector, SelectionKey.OP_ACCEPT , new AcceptHandler(base, hostName));
+            server.register(selector, SelectionKey.OP_ACCEPT , new AcceptHandler(param.getBase(), param.getHostName()));
 
             while (alive) {
                 if (selector.select() > 0) {
