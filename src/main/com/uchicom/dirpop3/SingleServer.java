@@ -86,17 +86,17 @@ public class SingleServer {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        
-        synchronized (server) {
-            if (server != null) {
-                try {
-                    server.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                server = null;
-            }
+        } finally {
+	        synchronized (server) {
+	            if (server != null) {
+	                try {
+	                    server.close();
+	                } catch (Exception e) {
+	                    e.printStackTrace();
+	                }
+	                server = null;
+	            }
+	        }
         }
 	}
 	
@@ -598,30 +598,31 @@ public class SingleServer {
             e.printStackTrace();
         } catch (Throwable e) {
             e.printStackTrace();
-        }
-        if (ps != null) {
-            try {
-                ps.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        if (br != null) {
-            try {
-                br.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        synchronized (socket) {
-            if (socket != null) {
-                try {
-                    socket.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                socket = null;
-            }
+        } finally {
+	        if (ps != null) {
+	            try {
+	                ps.close();
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+	        if (br != null) {
+	            try {
+	                br.close();
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+	        synchronized (socket) {
+	            if (socket != null) {
+	                try {
+	                    socket.close();
+	                } catch (Exception e) {
+	                    e.printStackTrace();
+	                }
+	                socket = null;
+	            }
+	        }
         }
 	}
 	

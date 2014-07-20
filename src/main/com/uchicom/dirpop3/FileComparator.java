@@ -29,11 +29,7 @@ public class FileComparator implements Comparator<File> {
             if (arg1 == null) {
                 return -1;
             } else {
-                if (arg0.lastModified() > arg1.lastModified()) {
-                    return 1;
-                } else {
-                    return -1;
-                }
+            	return arg0.compareTo(arg1);
             }
         }
     }

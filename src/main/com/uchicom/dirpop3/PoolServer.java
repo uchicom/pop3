@@ -64,17 +64,18 @@ public class PoolServer extends SingleServer implements Runnable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        if (server != null) {
-            try {
-                server.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            server = null;
-        }
-        if (exec != null) {
-            exec.shutdownNow();
+        } finally {
+	        if (server != null) {
+	            try {
+	                server.close();
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	            server = null;
+	        }
+	        if (exec != null) {
+	            exec.shutdownNow();
+	        }
         }
     }
     
