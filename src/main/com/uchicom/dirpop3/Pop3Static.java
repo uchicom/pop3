@@ -18,27 +18,27 @@ public class Pop3Static {
 
 	// POP3返却メッセージ
 	/** 返却メッセージ(+OK) */
-	public static String RECV_OK = "+OK ";
-	/** 返却メッセージ(+OK(行終端文字列あり)) */
-	public static String RECV_OK_LINE_END =  "+OK\r\n";
-	/** 返却メッセージ(-NG) */
-	public static String RECV_NG =  "-NG ";
-	/** 返却メッセージ(-NG(行終端文字列あり)) */
-	public static String RECV_NG_LINE_END =  "-NG\r\n";
-	/** 返却メッセージ(-NG(コマンド未対応)) */
-	public static String RECV_NG_CMD_NOT_FOUND =  "-NG Command not support\r\n";
-	/** 返却メッセージ(-ERR(行終端文字列あり) */
-	public static String RECV_ERR_LINE_END =  "-ERR\r\n";
+	public static String RECV_OK = "+OK";
 	/** 返却メッセージ(行終端文字列) */
 	public static String RECV_LINE_END = "\r\n";
+	/** 返却メッセージ(+OK(行終端文字列あり)) */
+	public static String RECV_OK_LINE_END =  "+OK" + RECV_LINE_END;
+	/** 返却メッセージ(-NG) */
+	public static String RECV_NG =  "-NG";
+	/** 返却メッセージ(-NG(行終端文字列あり)) */
+	public static String RECV_NG_LINE_END =  "-NG" + RECV_LINE_END;
+	/** 返却メッセージ(-NG(コマンド未対応)) */
+	public static String RECV_NG_CMD_NOT_FOUND =  "-NG Command not support";
+	/** 返却メッセージ(-ERR(行終端文字列あり) */
+	public static String RECV_ERR_LINE_END =  "-ERR" + RECV_LINE_END;
 	/** 返却メッセージ(.(行終端文字列あり)) */
-	public static String RECV_DATA_END =  ".\r\n";
+	public static String RECV_DATA =  ".";
 
 	// POP3コマンド正規表現
 	/** USER 文字の正規表現(大文字小文字後続スペース) */
-	public static String REG_EXP_USER_NAME = "^[Uu][Ss][Ee][Rr] +[^ ]+ *$";
+	public static String REG_EXP_USER = "^[Uu][Ss][Ee][Rr] +[^ ]+ *$";
 	/** PASS 文字の正規表現(大文字小文字後続スペース) */
-	public static String REG_EXP_PASS_WORD = "^[Pp][Aa][Ss][Ss] +[^ ]+ *$";
+	public static String REG_EXP_PASS = "^[Pp][Aa][Ss][Ss] +[^ ]+ *$";
 	/** STATの正規表現(大文字小文字後続スペース) */
 	public static String REG_EXP_STAT = "^[Ss][Tt][Aa][Tt] *$";
 	/** LISTの正規表現(大文字小文字後続スペース) */
@@ -88,4 +88,5 @@ public class Pop3Static {
 	public static int DEFAULT_BACK = 10;
 	/** デフォルトスレッドプール数 */
 	public static int DEFAULT_POOL = 10;
+
 }

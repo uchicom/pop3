@@ -10,7 +10,7 @@ import java.io.PrintStream;
  * @author uchicom: Shigeki Uchiyama
  *
  */
-public class Parameter {
+public class Pop3Parameter {
     private File base;
     private String hostName;
     private int port;
@@ -18,7 +18,7 @@ public class Parameter {
     private int pool;
     
     private String[] args;
-    public Parameter(String[] args) {
+    public Pop3Parameter(String[] args) {
         this.args = args;
     }
   

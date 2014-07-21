@@ -27,9 +27,9 @@ public class SelectorServer {
      * @param args
      */
     public static void main(String[] args) {
-        Parameter param = new Parameter(args);
-        if (param.init(System.err)) {
-            execute(param);
+        Pop3Parameter parameter = new Pop3Parameter(args);
+        if (parameter.init(System.err)) {
+            execute(parameter);
         }
     }
     private static boolean alive = true;
@@ -37,7 +37,7 @@ public class SelectorServer {
     /** メイン処理
      * 
      */
-    private static void execute(Parameter param) {
+    private static void execute(Pop3Parameter param) {
         ServerSocketChannel server = null;
         try {
             server = ServerSocketChannel.open();
