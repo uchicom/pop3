@@ -142,6 +142,24 @@ public class Pop3Util {
 	}
 
 	/**
+	 * コマンドがCAPAかどうかをチェックする.
+	 * @param cmd
+	 * @return
+	 */
+	public static boolean isCapa(String cmd) {
+		return cmd.matches(Pop3Static.REG_EXP_CAPA);
+	}
+
+	/**
+	 * コマンドがSTLSかどうかをチェックする.
+	 * @param cmd
+	 * @return
+	 */
+	public static boolean isStls(String cmd) {
+		return cmd.matches(Pop3Static.REG_EXP_STLS);
+	}
+
+	/**
 	 * ステータス行を出力する.
 	 * @param ps
 	 * @param strings
