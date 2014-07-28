@@ -115,6 +115,7 @@ public class Pop3Handler implements Handler {
                     // 何もしない
                 } else {
                     strBuff.append(Pop3Static.RECV_NG_CMD_NOT_FOUND);
+                    strBuff.append(Pop3Static.RECV_OK_LINE_END);
                 }
                 if (strBuff.length() > 0) {
                     key.interestOps(SelectionKey.OP_WRITE);
@@ -461,7 +462,7 @@ public class Pop3Handler implements Handler {
      * NOOP コマンド.
      */
     public void noop(String line) {
-
+        strBuff.append(Pop3Static.RECV_OK_LINE_END);
         // 何もしない
     }
     /**
