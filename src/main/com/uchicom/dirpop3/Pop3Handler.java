@@ -39,6 +39,8 @@ public class Pop3Handler implements Handler {
     // 認証が許可されたかどうかのフラグ
     /** 認証済みフラグ */
     boolean bPass;
+    /** 終了フラグ */
+    boolean finished;
     
     /** ユーザー名 */
     String user;
@@ -128,6 +130,11 @@ public class Pop3Handler implements Handler {
             //処理が途中の場合は途中から実施する。
             strBuff.setLength(0);
             key.interestOps(SelectionKey.OP_READ);
+            //終了処理
+            if (finished) {
+            	key.cancel();
+            	channel.close();
+            }
         }
     }
     
@@ -289,6 +296,7 @@ public class Pop3Handler implements Handler {
                 }
             }
             strBuff.append(Pop3Static.RECV_DATA);
+            strBuff.append(Pop3Static.RECV_LINE_END);
         } else {
             // 認証なしエラー
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
@@ -349,6 +357,7 @@ public class Pop3Handler implements Handler {
                 }
             }
             strBuff.append(Pop3Static.RECV_DATA);
+            strBuff.append(Pop3Static.RECV_LINE_END);
         } else {
             // エラー
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
@@ -382,6 +391,7 @@ public class Pop3Handler implements Handler {
                         readLine = passReader.readLine();
                     }
                     strBuff.append(Pop3Static.RECV_DATA);
+                    strBuff.append(Pop3Static.RECV_LINE_END);
                     passReader.close();
                 } else {
                     strBuff.append(Pop3Static.RECV_NG_LINE_END);
@@ -445,6 +455,7 @@ public class Pop3Handler implements Handler {
             }
         }
         strBuff.append(Pop3Static.RECV_OK_LINE_END);
+        finished = true;
     }
     /**
      * NOOP コマンド.
@@ -488,6 +499,7 @@ public class Pop3Handler implements Handler {
                         }
                     }
                     strBuff.append(Pop3Static.RECV_DATA);
+                    strBuff.append(Pop3Static.RECV_LINE_END);
                     passReader.close();
                 } else {
                     strBuff.append(Pop3Static.RECV_NG_LINE_END);
@@ -528,6 +540,7 @@ public class Pop3Handler implements Handler {
                 }
             }
             strBuff.append(Pop3Static.RECV_DATA);
+            strBuff.append(Pop3Static.RECV_LINE_END);
         } else {
             // 認証なしエラー
             strBuff.append(Pop3Static.RECV_NG_LINE_END);
