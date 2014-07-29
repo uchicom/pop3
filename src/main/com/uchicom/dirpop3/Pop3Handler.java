@@ -29,7 +29,7 @@ import java.util.List;
 public class Pop3Handler implements Handler {
 
     /** 出力用の文字列バッファ */
-    StringBuffer strBuff = new StringBuffer();
+    StringBuffer strBuff = new StringBuffer(1024);
     /** ダイジェスト用の変数 */
     String timestamp;
 
@@ -41,6 +41,7 @@ public class Pop3Handler implements Handler {
     boolean bPass;
     /** 終了フラグ */
     boolean finished;
+    long startTime = System.currentTimeMillis();
     
     /** ユーザー名 */
     String user;
@@ -115,7 +116,7 @@ public class Pop3Handler implements Handler {
                     // 何もしない
                 } else {
                     strBuff.append(Pop3Static.RECV_NG_CMD_NOT_FOUND);
-                    strBuff.append(Pop3Static.RECV_OK_LINE_END);
+                    strBuff.append(Pop3Static.RECV_LINE_END);
                 }
                 if (strBuff.length() > 0) {
                     key.interestOps(SelectionKey.OP_WRITE);
@@ -126,15 +127,19 @@ public class Pop3Handler implements Handler {
         }
         if (key.isWritable() && strBuff.length() > 0) {
             //初回の出力を実施
-            channel.write(ByteBuffer.wrap(strBuff.toString().getBytes()));
+            int size = channel.write(ByteBuffer.wrap(strBuff.toString().getBytes()));
             //書き込み処理が終わっていないかを確認する。
             //処理が途中の場合は途中から実施する。
-            strBuff.setLength(0);
-            key.interestOps(SelectionKey.OP_READ);
-            //終了処理
-            if (finished) {
-            	key.cancel();
-            	channel.close();
+            if (size < strBuff.length()) {
+            	strBuff = new StringBuffer(strBuff.substring(size));
+            } else {
+	            strBuff.setLength(0);
+	            key.interestOps(SelectionKey.OP_READ);
+	            //終了処理
+	            if (finished) {
+	            	key.cancel();
+	            	channel.close();
+	            }
             }
         }
     }
@@ -455,7 +460,11 @@ public class Pop3Handler implements Handler {
                 delFile.delete();
             }
         }
-        strBuff.append(Pop3Static.RECV_OK_LINE_END);
+        strBuff.append(Pop3Static.RECV_OK);
+		strBuff.append(" ");
+		strBuff.append((System.currentTimeMillis() - startTime));
+		strBuff.append("[m/s]");
+        strBuff.append(Pop3Static.RECV_LINE_END);
         finished = true;
     }
     /**
@@ -651,17 +660,17 @@ public class Pop3Handler implements Handler {
                     md.update((timestamp + password)
                             .getBytes());
                     byte[] passBytes = md.digest();
-                    StringBuffer strBuff = new StringBuffer(
+                    StringBuffer tmpBuff = new StringBuffer(
                             32);
                     for (int i = 0; i < passBytes.length; i++) {
                         int d = passBytes[i] & 0xFF;
                         if (d < 0x10) {
-                            strBuff.append("0");
+                            tmpBuff.append("0");
                         }
-                        strBuff.append(Integer
+                        tmpBuff.append(Integer
                                 .toHexString(d));
                     }
-                    if (digest.equals(strBuff.toString())) {
+                    if (digest.equals(tmpBuff.toString())) {
                         strBuff.append(Pop3Static.RECV_OK_LINE_END);
                         bPass = true;
                     } else {

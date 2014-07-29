@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author uchicom: Shigeki Uchiyama
  *
  */
-public class SelectorServer {
+public class SelectorPop3Server {
 
     protected static Queue<ServerSocketChannel> serverQueue = new ConcurrentLinkedQueue<ServerSocketChannel>();
     
