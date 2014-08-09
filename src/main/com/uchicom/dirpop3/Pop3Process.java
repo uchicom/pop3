@@ -381,6 +381,7 @@ public class Pop3Process {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
 								ps.print(Pop3Static.RECV_OK);
+								ps.print(' ');
 								ps.print(heads[1]);
 								ps.print(' ');
 								String name = child.getName();
