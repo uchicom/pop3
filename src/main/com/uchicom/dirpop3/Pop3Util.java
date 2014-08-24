@@ -1,3 +1,6 @@
+/**
+ * (c) 2014 uchicom
+ */
 package com.uchicom.dirpop3;
 
 import java.io.PrintStream;
