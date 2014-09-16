@@ -495,17 +495,17 @@ public class Pop3Handler implements Handler {
                     String readLine = passReader.readLine();
                     int maxRow = Integer.parseInt(lines[2]);
                     int row = 0;
-                    boolean head = true;
-                    while (readLine != null && (head || row < maxRow)) {
+                    boolean messageHead = true;
+                    while (readLine != null && (messageHead || row <= maxRow)) {
                         strBuff.append(readLine);
                         strBuff.append(Pop3Static.RECV_LINE_END);
                         
                         readLine = passReader.readLine();
-                        if (!head) {
+                        if (!messageHead) {
                             row++;
                         }
-                        if (!"".equals(readLine)) {
-                            head = false;
+                        if ("".equals(readLine)) {
+                        	messageHead = false;
                         }
                     }
                     strBuff.append(Pop3Static.RECV_DATA);

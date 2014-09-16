@@ -323,8 +323,7 @@ public class Pop3Process {
 								int row = 0;
 								boolean messageHead = true;
 								while (readLine != null
-										&& (messageHead || row < maxRow)) {
-
+										&& (messageHead || row <= maxRow)) {
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = passReader.readLine();
 									if (!messageHead) {
