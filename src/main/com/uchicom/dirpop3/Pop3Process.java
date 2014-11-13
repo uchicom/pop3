@@ -75,8 +75,6 @@ public class Pop3Process {
 			// DELEコマンド時に指定したメールが格納される(PASSコマンド時に認証が許可されると設定される)
 			List<File> delList = null;
 			while (line != null) {
-				// デバッグ文字列
-				System.out.println("[" + line + "]");
 				if (Pop3Util.isUser(line)) {
 					bUser = true;
 					user = line.split(" ")[1];
