@@ -6,35 +6,39 @@ package com.uchicom.dirpop3;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * POP3サーバー
  * シングルスレッド.
  * @author Uchiyama Shigeki
- * 
+ *
  */
 public class SinglePop3Server {
 
 	protected static Queue<ServerSocket> serverQueue = new ConcurrentLinkedQueue<ServerSocket>();
 
+	protected List<Pop3Process> processList = new CopyOnWriteArrayList<Pop3Process>();
 	/**
 	 * アドレスとメールユーザーフォルダの格納フォルダを指定する
-	 * 
+	 *
 	 * @param args
 	 */
 	public static void main(String[] args) {
 	    Pop3Parameter parameter = new Pop3Parameter(args);
 	    if (parameter.init(System.err)) {
-	        execute(parameter);
+	    	SinglePop3Server server = new SinglePop3Server();
+	    	server.execute(parameter);
 	    }
 	}
 	/** メイン処理
-	 * 
+	 *
 	 */
-	private static void execute(Pop3Parameter parameter) {
-	    
+	private void execute(Pop3Parameter parameter) {
+
 	    ServerSocket serverSocket = null;
         try {
         	serverSocket = new ServerSocket();
@@ -60,7 +64,7 @@ public class SinglePop3Server {
 	        }
         }
 	}
-	
+
 	public static void shutdown(String[] args) {
 	    if (!serverQueue.isEmpty()) {
             try {

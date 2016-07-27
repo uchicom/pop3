@@ -30,9 +30,10 @@ public class Pop3Process {
 
 	protected FileComparator comparator = new FileComparator();
 
+	private long startTime = System.currentTimeMillis();
 	/**
 	 * コンストラクタ.
-	 * 
+	 *
 	 * @param parameter
 	 * @param socket
 	 * @throws IOException
@@ -495,6 +496,7 @@ public class Pop3Process {
 					//コマンドエラー
 					Pop3Util.recieveLine(ps, Pop3Static.RECV_NG_CMD_NOT_FOUND);
 				}
+				startTime = System.currentTimeMillis();
 				line = br.readLine();
 			}
 		} catch (IOException e) {
@@ -528,6 +530,27 @@ public class Pop3Process {
 					socket = null;
 				}
 			}
+		}
+	}
+
+	public long getStartTime() {
+		return startTime;
+	}
+
+	public void forceClose() {
+//		if (rejectMap.containsKey(senderAddress)) {
+//			rejectMap.put(senderAddress, rejectMap.get(senderAddress) + 1);
+//		} else {
+//			rejectMap.put(senderAddress, 1);
+//		}
+		System.out.println("forceClose!");
+		if (socket != null && socket.isConnected()) {
+			try {
+				socket.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			socket = null;
 		}
 	}
 }

@@ -12,9 +12,9 @@ import java.util.concurrent.Executors;
 
 /**
  * マルチスレッドのPOP3サーバー. スレッドプールを使用.
- * 
+ *
  * @author Uchiyama Shigeki
- * 
+ *
  */
 public class PoolPop3Server extends SinglePop3Server {
 
@@ -22,21 +22,22 @@ public class PoolPop3Server extends SinglePop3Server {
 
 	/**
 	 * アドレスとメールユーザーフォルダの格納フォルダを指定する
-	 * 
+	 *
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		Pop3Parameter parameter = new Pop3Parameter(args);
 		if (parameter.init(System.err)) {
-			execute(parameter);
+			PoolPop3Server server = new PoolPop3Server();
+	    	server.execute(parameter);
 		}
 	}
 
 	/**
 	 * メイン処理
-	 * 
+	 *
 	 */
-	private static void execute(Pop3Parameter parameter) {
+	private void execute(Pop3Parameter parameter) {
 
 		ExecutorService exec = null;
 		ServerSocket serverSocket = null;

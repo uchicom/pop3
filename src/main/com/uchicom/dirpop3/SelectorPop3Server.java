@@ -22,22 +22,23 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class SelectorPop3Server {
 
     protected static Queue<ServerSocketChannel> serverQueue = new ConcurrentLinkedQueue<ServerSocketChannel>();
-    
+
     /**
      * @param args
      */
     public static void main(String[] args) {
         Pop3Parameter parameter = new Pop3Parameter(args);
         if (parameter.init(System.err)) {
-            execute(parameter);
+        	SelectorPop3Server server = new SelectorPop3Server();
+	    	server.execute(parameter);
         }
     }
     private static boolean alive = true;
-    
+
     /** メイン処理
-     * 
+     *
      */
-    private static void execute(Pop3Parameter param) {
+    private void execute(Pop3Parameter param) {
         ServerSocketChannel server = null;
         try {
             server = ServerSocketChannel.open();
@@ -45,7 +46,7 @@ public class SelectorPop3Server {
             server.socket().bind(new InetSocketAddress(param.getPort()), param.getBack());
             server.configureBlocking(false);
             serverQueue.add(server);
-            
+
             Selector selector = Selector.open();
             server.register(selector, SelectionKey.OP_ACCEPT , new AcceptHandler(param.getBase(), param.getHostName()));
 
@@ -88,7 +89,7 @@ public class SelectorPop3Server {
         }
     }
 
-    
+
     public static void shutdown(String[] args) {
         if (!serverQueue.isEmpty()) {
             try {
