@@ -11,74 +11,92 @@ import java.io.PrintStream;
  *
  */
 public class Pop3Parameter {
-    private File base;
-    private String hostName;
-    private int port;
-    private int back;
-    private int pool;
-    
+	/** メールボックスの基準フォルダ */
+    private File base = Pop3Static.DEFAULT_MAILBOX;;
+	/** ホスト名 */
+	private String hostName = "localhost";
+	/** 待ち受けポート */
+    private int port = Pop3Static.DEFAULT_PORT;
+	/** 受信する接続 (接続要求) のキューの最大長 */
+    private int backlog = Pop3Static.DEFAULT_BACK;
+	/** プールするスレッド数 */
+    private int pool = Pop3Static.DEFAULT_POOL;
+    /** 実行するサーバのタイプ */
+    private String type = "single";
+
     private String[] args;
     public Pop3Parameter(String[] args) {
         this.args = args;
     }
-  
+
     /**
      * 初期化
      * @param ps
      * @return
      */
     public boolean init(PrintStream ps) {
-        if (args.length < 1) {
-            ps.println("args.length < 1");
-            return false;
-        }
-        // メールフォルダ格納フォルダ
-        base = Pop3Static.DEFAULT_MAILBOX;
-
-        if (args.length > 1) {
-            base = new File(args[0]);
-        }
-        if (!base.exists() || !base.isDirectory()) {
-            System.err.println("mailbox directory is not found.");
-            return false;
-        }
-
-        // メール
-        hostName = args[1];
-
-        // ポート
-        port = Pop3Static.DEFAULT_PORT;
-        if (args.length > 2) {
-            port = Integer.parseInt(args[2]);
-        } 
-        // 接続待ち数
-        back =  Pop3Static.DEFAULT_BACK;
-        if (args.length > 3) {
-            back = Integer.parseInt(args[3]);
-        }
-        // スレッドプール数
-        pool = Pop3Static.DEFAULT_POOL;
-        if (args.length > 4) {
-            pool = Integer.parseInt(args[4]);
-        }
+    	for (int i = 0; i < args.length - 1; i++) {
+			switch (args[i]) {
+			case "-type":// サーバタイプ
+				this.type = args[++i];
+				break;
+			case "-dir":// メールフォルダ格納フォルダ
+				base = new File(args[++i]);
+				if (!base.exists() || !base.isDirectory()) {
+					ps.println("mailbox directory is not found.");
+					return false;
+				}
+				break;
+			case "-host":// ホスト名
+				hostName = args[++i];
+				break;
+			case "-port":// ポート
+				port = Integer.parseInt(args[++i]);
+				break;
+			case "-back":// 接続待ち数
+				backlog = Integer.parseInt(args[++i]);
+				break;
+			case "-pool":// スレッドプール数
+				pool = Integer.parseInt(args[++i]);
+				break;
+			}
+		}
 
         return true;
     }
-    
+
     public String getHostName() {
         return hostName;
     }
-    
+
     public int getPort() {
         return port;
     }
-    public int getBack() {
-        return back;
+    public int getBacklog() {
+        return backlog;
     }
     public File getBase() {
         return base;
     }
     public int getPool() {
         return pool;
+    }
+
+    public Server createServer() {
+    	Server server = null;
+		switch (type) {
+		case "multi":
+			server = new MultiPop3Server(this);
+		case "pool":
+			server = new PoolPop3Server(this);
+			break;
+		case "single":
+			server = new SinglePop3Server(this);
+			break;
+		case "selector":
+			server = new SelectorPop3Server(this);
+			break;
+		}
+    	return server;
     }
 }

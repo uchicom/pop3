@@ -4,9 +4,7 @@
 package com.uchicom.dirpop3;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,63 +14,32 @@ import java.util.concurrent.Executors;
  * @author Uchiyama Shigeki
  *
  */
-public class PoolPop3Server extends SinglePop3Server {
+public class PoolPop3Server extends AbstractSocketServer {
 
-	protected Socket socket;
-
+	ExecutorService exec = null;
 	/**
-	 * アドレスとメールユーザーフォルダの格納フォルダを指定する
-	 *
-	 * @param args
+	 * @param parameter
 	 */
-	public static void main(String[] args) {
-		Pop3Parameter parameter = new Pop3Parameter(args);
-		if (parameter.init(System.err)) {
-			PoolPop3Server server = new PoolPop3Server();
-	    	server.execute(parameter);
-		}
+	public PoolPop3Server(Pop3Parameter parameter) {
+		super(parameter);
+		exec = Executors.newFixedThreadPool(parameter.getPool());
 	}
 
 	/**
 	 * メイン処理
 	 *
 	 */
-	private void execute(Pop3Parameter parameter) {
-
-		ExecutorService exec = null;
-		ServerSocket serverSocket = null;
-		try {
-			serverSocket = new ServerSocket();
-			serverSocket.setReuseAddress(true);
-			serverSocket.bind(new InetSocketAddress(parameter.getPort()),
-					parameter.getBack());
-			serverQueue.add(serverSocket);
-
-			exec = Executors.newFixedThreadPool(parameter.getPool());
-			while (true) {
-				final Pop3Process process = new Pop3Process(parameter,
-						serverSocket.accept());
-				exec.execute(new Runnable() {
-					@Override
-					public void run() {
-						process.execute();
-					}
-				});
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (serverSocket != null) {
-				try {
-					serverSocket.close();
-				} catch (Exception e) {
-					e.printStackTrace();
+	@Override
+	protected void execute(ServerSocket serverSocket) throws IOException {
+		while (true) {
+			final Pop3Process process = new Pop3Process(parameter,
+					serverSocket.accept());
+			exec.execute(new Runnable() {
+				@Override
+				public void run() {
+					process.execute();
 				}
-				serverSocket = null;
-			}
-			if (exec != null) {
-				exec.shutdownNow();
-			}
+			});
 		}
 	}
 

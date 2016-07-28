@@ -30,7 +30,9 @@ public class Pop3Process {
 
 	protected FileComparator comparator = new FileComparator();
 
-	private long startTime = System.currentTimeMillis();
+	/** 最終処理時刻 */
+	private long lastTime = System.currentTimeMillis();
+
 	/**
 	 * コンストラクタ.
 	 *
@@ -49,7 +51,7 @@ public class Pop3Process {
 	 */
 	public void execute() {
 		Pop3Util.log(format.format(new Date()) + ":"
-					+ String.valueOf(socket.getRemoteSocketAddress()));
+				+ String.valueOf(socket.getRemoteSocketAddress()));
 		// 0.はプロセスごとに変える番号だけど、とくに複数プロセスを持っていないので。
 		String timestamp = "<" + Thread.currentThread().getId() + "."
 				+ System.currentTimeMillis() + "@" + parameter.getHostName()
@@ -496,7 +498,7 @@ public class Pop3Process {
 					//コマンドエラー
 					Pop3Util.recieveLine(ps, Pop3Static.RECV_NG_CMD_NOT_FOUND);
 				}
-				startTime = System.currentTimeMillis();
+				lastTime = System.currentTimeMillis();
 				line = br.readLine();
 			}
 		} catch (IOException e) {
@@ -533,16 +535,24 @@ public class Pop3Process {
 		}
 	}
 
-	public long getStartTime() {
-		return startTime;
+	/**
+	 * 最終処理時刻を取得します.
+	 *
+	 * @return
+	 */
+	public long getLastTime() {
+		return lastTime;
 	}
 
+	/**
+	 * 強制終了.
+	 */
 	public void forceClose() {
-//		if (rejectMap.containsKey(senderAddress)) {
-//			rejectMap.put(senderAddress, rejectMap.get(senderAddress) + 1);
-//		} else {
-//			rejectMap.put(senderAddress, 1);
-//		}
+		//		if (rejectMap.containsKey(senderAddress)) {
+		//			rejectMap.put(senderAddress, rejectMap.get(senderAddress) + 1);
+		//		} else {
+		//			rejectMap.put(senderAddress, 1);
+		//		}
 		System.out.println("forceClose!");
 		if (socket != null && socket.isConnected()) {
 			try {
