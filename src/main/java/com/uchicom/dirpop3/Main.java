@@ -12,7 +12,7 @@ package com.uchicom.dirpop3;
 public class Main {
 
 	/**
-	 * アドレスとメールユーザーフォルダの格納フォルダを指定する
+	 * アドレスとメールユーザーフォルダの格納フォルダを指定する.
 	 *
 	 * @param args
 	 */

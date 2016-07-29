@@ -12,15 +12,15 @@ import java.io.PrintStream;
  */
 public class Pop3Parameter {
 	/** メールボックスの基準フォルダ */
-    private File base = Pop3Static.DEFAULT_MAILBOX;;
+    private File base = Constants.DEFAULT_MAILBOX;;
 	/** ホスト名 */
 	private String hostName = "localhost";
 	/** 待ち受けポート */
-    private int port = Pop3Static.DEFAULT_PORT;
+    private int port = Constants.DEFAULT_PORT;
 	/** 受信する接続 (接続要求) のキューの最大長 */
-    private int backlog = Pop3Static.DEFAULT_BACK;
+    private int backlog = Constants.DEFAULT_BACK;
 	/** プールするスレッド数 */
-    private int pool = Pop3Static.DEFAULT_POOL;
+    private int pool = Constants.DEFAULT_POOL;
     /** 実行するサーバのタイプ */
     private String type = "single";
 

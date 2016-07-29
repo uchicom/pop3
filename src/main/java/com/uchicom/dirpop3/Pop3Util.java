@@ -14,7 +14,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isUser(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_USER);
+		return cmd.matches(Constants.REG_EXP_USER);
 	}
 
 
@@ -24,7 +24,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isPass(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_PASS);
+		return cmd.matches(Constants.REG_EXP_PASS);
 	}
 
 	/**
@@ -33,7 +33,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isStat(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_STAT);
+		return cmd.matches(Constants.REG_EXP_STAT);
 	}
 
 	/**
@@ -42,7 +42,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isList(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_LIST);
+		return cmd.matches(Constants.REG_EXP_LIST);
 	}
 
 	/**
@@ -51,7 +51,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isListNum(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_LIST_NUM);
+		return cmd.matches(Constants.REG_EXP_LIST_NUM);
 	}
 
 	/**
@@ -60,7 +60,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isRetr(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_RETR);
+		return cmd.matches(Constants.REG_EXP_RETR);
 	}
 
 	/**
@@ -69,7 +69,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isRetrNum(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_RETR_NUM);
+		return cmd.matches(Constants.REG_EXP_RETR_NUM);
 	}
 
 	/**
@@ -78,7 +78,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isDeleNum(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_DELE_NUM);
+		return cmd.matches(Constants.REG_EXP_DELE_NUM);
 	}
 
 	/**
@@ -87,7 +87,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isRset(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_RSET);
+		return cmd.matches(Constants.REG_EXP_RSET);
 	}
 
 	/**
@@ -96,7 +96,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isQuit(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_QUIT);
+		return cmd.matches(Constants.REG_EXP_QUIT);
 	}
 
 	/**
@@ -105,7 +105,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isTopNumNum(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_TOP_NUM_NUM);
+		return cmd.matches(Constants.REG_EXP_TOP_NUM_NUM);
 	}
 
 	/**
@@ -114,7 +114,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isUidl(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_UIDL);
+		return cmd.matches(Constants.REG_EXP_UIDL);
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isUidlNum(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_UIDL_NUM);
+		return cmd.matches(Constants.REG_EXP_UIDL_NUM);
 	}
 
 	/**
@@ -132,7 +132,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isApopNameDigest(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_APOP_NAME_DIGEST);
+		return cmd.matches(Constants.REG_EXP_APOP_NAME_DIGEST);
 	}
 
 	/**
@@ -141,7 +141,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isNoop(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_NOOP);
+		return cmd.matches(Constants.REG_EXP_NOOP);
 	}
 
 	/**
@@ -150,7 +150,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isCapa(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_CAPA);
+		return cmd.matches(Constants.REG_EXP_CAPA);
 	}
 
 	/**
@@ -159,7 +159,7 @@ public class Pop3Util {
 	 * @return
 	 */
 	public static boolean isStls(String cmd) {
-		return cmd.matches(Pop3Static.REG_EXP_STLS);
+		return cmd.matches(Constants.REG_EXP_STLS);
 	}
 
 	/**
@@ -171,12 +171,12 @@ public class Pop3Util {
 		for (String string : strings) {
 			ps.print(string);
 		}
-		ps.print(Pop3Static.RECV_LINE_END);
+		ps.print(Constants.RECV_LINE_END);
 		ps.flush();
 	}
 	
 	public static void log(String string) {
-		if (Pop3Static.DEBUG) {
+		if (Constants.DEBUG) {
 			System.out.println(string);
 		}
 	}

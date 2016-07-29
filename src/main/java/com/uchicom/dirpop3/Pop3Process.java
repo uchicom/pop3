@@ -24,7 +24,7 @@ public class Pop3Process {
 
 	/** ファイルとUIDLで使用する日時フォーマット */
 	private final SimpleDateFormat format = new SimpleDateFormat(
-			Pop3Static.DATE_TIME_MILI_FORMAT);
+			Constants.DATE_TIME_MILI_FORMAT);
 	private Pop3Parameter parameter;
 	private Socket socket;
 
@@ -63,7 +63,7 @@ public class Pop3Process {
 					socket.getInputStream()));
 			ps = new PrintStream(socket.getOutputStream());
 			// 1接続に対する受付開始
-			Pop3Util.recieveLine(ps, Pop3Static.RECV_OK, " ", timestamp);
+			Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
 			// 以下はログイン中のみ有効な変数
 			String line = br.readLine();
 			// ユーザーコマンドでユーザーが設定されたかどうかのフラグ
@@ -81,7 +81,7 @@ public class Pop3Process {
 				if (Pop3Util.isUser(line)) {
 					bUser = true;
 					user = line.split(" ")[1];
-					Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+					Pop3Util.recieveLine(ps, Constants.RECV_OK);
 				} else if (Pop3Util.isPass(line)) {
 					if (bUser && !bPass) {
 						pass = line.split(" ")[1];
@@ -102,7 +102,7 @@ public class Pop3Process {
 													if (file.isFile()
 															&& !file.isHidden()
 															&& file.canRead()
-															&& !Pop3Static.PASSWORD_FILE_NAME
+															&& !Constants.PASSWORD_FILE_NAME
 																	.equals(name)) {
 														return true;
 													}
@@ -123,7 +123,7 @@ public class Pop3Process {
 							// パスワードチェック
 							if (!"".equals(pass)) {
 								File passwordFile = new File(userBox,
-										Pop3Static.PASSWORD_FILE_NAME);
+										Constants.PASSWORD_FILE_NAME);
 								if (passwordFile.exists()
 										&& passwordFile.isFile()) {
 									BufferedReader passReader = new BufferedReader(
@@ -138,28 +138,28 @@ public class Pop3Process {
 									if (pass.equals(password)) {
 
 										Pop3Util.recieveLine(ps,
-												Pop3Static.RECV_OK);
+												Constants.RECV_OK);
 										bPass = true;
 									} else {
 										// パスワード不一致エラー
 										Pop3Util.recieveLine(ps,
-												Pop3Static.RECV_NG);
+												Constants.RECV_NG);
 									}
 								} else {
 									// パスワードファイルなしエラー
-									Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+									Pop3Util.recieveLine(ps, Constants.RECV_NG);
 								}
 							} else {
 								// パスワード入力なしエラー
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
 							// ユーザー存在しないエラー
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// ユーザー名未入力エラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isStat(line)) {
 					if (bPass) {
@@ -172,17 +172,17 @@ public class Pop3Process {
 								fileCnt++;
 							}
 						}
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_OK, " ",
+						Pop3Util.recieveLine(ps, Constants.RECV_OK, " ",
 								String.valueOf(fileCnt), " ",
 								String.valueOf(fileLength));
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isList(line)) {
 					if (bPass) {
 						// リスト表示
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+						Pop3Util.recieveLine(ps, Constants.RECV_OK);
 						for (int i = 0; i < mailList.size(); i++) {
 							File child = mailList.get(i);
 							if (!delList.contains(child)) {
@@ -191,10 +191,10 @@ public class Pop3Process {
 										" ", String.valueOf(child.length()));
 							}
 						}
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_DATA);
+						Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 					ps.flush();
 				} else if (Pop3Util.isListNum(line)) {
@@ -205,23 +205,23 @@ public class Pop3Process {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_OK,
+								Pop3Util.recieveLine(ps, Constants.RECV_OK,
 										" ", line.substring(5), " ",
 										String.valueOf(child.length()));
 							} else {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
 							// index範囲外
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isRetr(line)) {
 					if (bPass) {
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+						Pop3Util.recieveLine(ps, Constants.RECV_OK);
 						for (File child : mailList) {
 							if (!delList.contains(child)) {
 								BufferedReader passReader = new BufferedReader(
@@ -235,10 +235,10 @@ public class Pop3Process {
 								passReader.close();
 							}
 						}
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_DATA);
+						Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 					} else {
 						// エラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isRetrNum(line)) {
 					if (bPass) {
@@ -247,7 +247,7 @@ public class Pop3Process {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_OK, " ", String.valueOf(child.length()));
+								Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", String.valueOf(child.length()));
 								BufferedReader passReader = new BufferedReader(
 										new InputStreamReader(
 												new FileInputStream(child)));
@@ -256,18 +256,18 @@ public class Pop3Process {
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = passReader.readLine();
 								}
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_DATA);
+								Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 								passReader.close();
 							} else {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
 							// index範囲外
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// エラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 					ps.flush();
 				} else if (Pop3Util.isDeleNum(line)) {
@@ -278,24 +278,24 @@ public class Pop3Process {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							delList.add(child);
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+							Pop3Util.recieveLine(ps, Constants.RECV_OK);
 						} else {
 							// index範囲外
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// エラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isRset(line)) {
 					// リセット
 					if (bPass) {
 						// 消去マークを無くす
 						delList.clear();
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+						Pop3Util.recieveLine(ps, Constants.RECV_OK);
 					} else {
 						// エラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isQuit(line)) {
 					if (delList != null) {
@@ -304,7 +304,7 @@ public class Pop3Process {
 							delFile.delete();
 						}
 					}
-					Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+					Pop3Util.recieveLine(ps, Constants.RECV_OK);
 					// 削除失敗時は-ERRを返すべきだけどまだやってない。
 					break;
 				} else if (Pop3Util.isTopNumNum(line)) {
@@ -315,7 +315,7 @@ public class Pop3Process {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+								Pop3Util.recieveLine(ps, Constants.RECV_OK);
 								BufferedReader passReader = new BufferedReader(
 										new InputStreamReader(
 												new FileInputStream(child)));
@@ -334,22 +334,22 @@ public class Pop3Process {
 										messageHead = false;
 									}
 								}
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_DATA);
+								Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 								passReader.close();
 							} else {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (Pop3Util.isUidl(line)) {
 					if (bPass) {
 						// TRANSACTION 状態でのみ許可される
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+						Pop3Util.recieveLine(ps, Constants.RECV_OK);
 						for (int i = 0; i < mailList.size(); i++) {
 							File child = mailList.get(i);
 							if (!delList.contains(child)) {
@@ -366,13 +366,13 @@ public class Pop3Process {
 								} else {
 									ps.print(name.substring(lastIndex));
 								}
-								ps.print(Pop3Static.RECV_LINE_END);
+								ps.print(Constants.RECV_LINE_END);
 							}
 						}
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_DATA);
+						Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 					ps.flush();
 				} else if (Pop3Util.isUidlNum(line)) {
@@ -383,7 +383,7 @@ public class Pop3Process {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
-								ps.print(Pop3Static.RECV_OK);
+								ps.print(Constants.RECV_OK);
 								ps.print(' ');
 								ps.print(heads[1]);
 								ps.print(' ');
@@ -398,17 +398,17 @@ public class Pop3Process {
 								} else {
 									ps.print(name.substring(lastIndex));
 								}
-								ps.print(Pop3Static.RECV_LINE_END);
+								ps.print(Constants.RECV_LINE_END);
 							} else {
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
 							// index範囲外
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// 認証なしエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 					ps.flush();
 				} else if (Pop3Util.isApopNameDigest(line)) {
@@ -432,7 +432,7 @@ public class Pop3Process {
 															name);
 													if (file.isFile()
 															&& !file.isHidden()
-															&& !Pop3Static.PASSWORD_FILE_NAME
+															&& !Constants.PASSWORD_FILE_NAME
 																	.equals(name)) {
 														return true;
 													}
@@ -449,7 +449,7 @@ public class Pop3Process {
 						if (existUser) {
 							// パスワードチェック
 							File passwordFile = new File(userBox,
-									Pop3Static.PASSWORD_FILE_NAME);
+									Constants.PASSWORD_FILE_NAME);
 							if (passwordFile.exists() && passwordFile.isFile()) {
 								BufferedReader passReader = new BufferedReader(
 										new InputStreamReader(
@@ -474,29 +474,29 @@ public class Pop3Process {
 									strBuff.append(Integer.toHexString(d));
 								}
 								if (digest.equals(strBuff.toString())) {
-									Pop3Util.recieveLine(ps, Pop3Static.RECV_OK);
+									Pop3Util.recieveLine(ps, Constants.RECV_OK);
 									bPass = true;
 								} else {
 									// パスワード不一致エラー
-									Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+									Pop3Util.recieveLine(ps, Constants.RECV_NG);
 								}
 							} else {
 								// パスワードファイルなしエラー
-								Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
 						} else {
 							// ユーザー存在しないエラー
-							Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+							Pop3Util.recieveLine(ps, Constants.RECV_NG);
 						}
 					} else {
 						// パスワード認証後に再度パスワード認証はエラー
-						Pop3Util.recieveLine(ps, Pop3Static.RECV_NG);
+						Pop3Util.recieveLine(ps, Constants.RECV_NG);
 					}
 				} else if (line.length() == 0 || Pop3Util.isNoop(line)) {
 					// 何もしない
 				} else {
 					//コマンドエラー
-					Pop3Util.recieveLine(ps, Pop3Static.RECV_NG_CMD_NOT_FOUND);
+					Pop3Util.recieveLine(ps, Constants.RECV_NG_CMD_NOT_FOUND);
 				}
 				lastTime = System.currentTimeMillis();
 				line = br.readLine();

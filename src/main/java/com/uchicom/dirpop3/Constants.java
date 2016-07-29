@@ -10,7 +10,7 @@ import java.io.File;
  * @author Uchiyama Shigeki
  * 
  */
-public class Pop3Static {
+public class Constants {
     
     /** デバッグフラグ */
 

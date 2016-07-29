@@ -67,10 +67,10 @@ public class Pop3Handler implements Handler {
     public Pop3Handler(File base, String hostName) {
         this.base = base;
         timestamp = "<" +Thread.currentThread().getId() + "." + System.currentTimeMillis() + "@" + hostName + ">";
-        strBuff.append(Pop3Static.RECV_OK);
+        strBuff.append(Constants.RECV_OK);
         strBuff.append(' ');
         strBuff.append(timestamp);
-        strBuff.append(Pop3Static.RECV_LINE_END);
+        strBuff.append(Constants.RECV_LINE_END);
     }
     /* (non-Javadoc)
      * @see com.uchicom.dirpop3.Handler#handle(java.nio.channels.SelectionKey)
@@ -82,41 +82,41 @@ public class Pop3Handler implements Handler {
             int length = channel.read(readBuff);
             if (length > 0 && checkCmd()) {
                 String line = getCmd();
-                if (line.matches(Pop3Static.REG_EXP_USER)) {
+                if (line.matches(Constants.REG_EXP_USER)) {
                     user(line);
-                } else if (line.matches(Pop3Static.REG_EXP_PASS)) {
+                } else if (line.matches(Constants.REG_EXP_PASS)) {
                     pass(line);
-                } else if (line.matches(Pop3Static.REG_EXP_STAT)) {
+                } else if (line.matches(Constants.REG_EXP_STAT)) {
                     stat(line);
-                } else if (line.matches(Pop3Static.REG_EXP_LIST)) {
+                } else if (line.matches(Constants.REG_EXP_LIST)) {
                     list(line);
-                } else if (line.matches(Pop3Static.REG_EXP_LIST_NUM)) {
+                } else if (line.matches(Constants.REG_EXP_LIST_NUM)) {
                     listNum(line);
-                } else if (line.matches(Pop3Static.REG_EXP_RETR)) {
+                } else if (line.matches(Constants.REG_EXP_RETR)) {
                     retr(line);
-                } else if (line.matches(Pop3Static.REG_EXP_RETR_NUM)) {
+                } else if (line.matches(Constants.REG_EXP_RETR_NUM)) {
                     retrNum(line);
-                } else if (line.matches(Pop3Static.REG_EXP_DELE_NUM)) {
+                } else if (line.matches(Constants.REG_EXP_DELE_NUM)) {
                     deleNum(line);
-                } else if (line.matches(Pop3Static.REG_EXP_RSET)) {
+                } else if (line.matches(Constants.REG_EXP_RSET)) {
                     rset(line);
-                } else if (line.matches(Pop3Static.REG_EXP_QUIT)) {
+                } else if (line.matches(Constants.REG_EXP_QUIT)) {
                     quit(line);
-                } else if (line.matches(Pop3Static.REG_EXP_NOOP)) {
+                } else if (line.matches(Constants.REG_EXP_NOOP)) {
                     noop(line);
-                } else if (line.matches(Pop3Static.REG_EXP_TOP_NUM_NUM)) {
+                } else if (line.matches(Constants.REG_EXP_TOP_NUM_NUM)) {
                     topNumNum(line);
-                } else if (line.matches(Pop3Static.REG_EXP_UIDL)) {
+                } else if (line.matches(Constants.REG_EXP_UIDL)) {
                     uidl(line);
-                } else if (line.matches(Pop3Static.REG_EXP_UIDL_NUM)) {
+                } else if (line.matches(Constants.REG_EXP_UIDL_NUM)) {
                     uidlNum(line);
-                } else if (line.matches(Pop3Static.REG_EXP_APOP_NAME_DIGEST)) {
+                } else if (line.matches(Constants.REG_EXP_APOP_NAME_DIGEST)) {
                     apopNameDigest(line);
                 } else if ("".equals(line)) {
                     // 何もしない
                 } else {
-                    strBuff.append(Pop3Static.RECV_NG_CMD_NOT_FOUND);
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_NG_CMD_NOT_FOUND);
+                    strBuff.append(Constants.RECV_LINE_END);
                 }
                 if (strBuff.length() > 0) {
                     key.interestOps(SelectionKey.OP_WRITE);
@@ -169,7 +169,7 @@ public class Pop3Handler implements Handler {
     public void user(String line) {
         bUser = true;
         user = line.split(" ")[1];
-        strBuff.append(Pop3Static.RECV_OK_LINE_END);
+        strBuff.append(Constants.RECV_OK_LINE_END);
     }
     
     /**
@@ -198,7 +198,7 @@ public class Pop3Handler implements Handler {
                                         if (file.isFile()
                                                 && !file.isHidden()
                                                 && file.canRead()
-                                                && !Pop3Static.PASSWORD_FILE_NAME
+                                                && !Constants.PASSWORD_FILE_NAME
                                                         .equals(name)) {
                                             return true;
                                         }
@@ -219,7 +219,7 @@ public class Pop3Handler implements Handler {
                 // パスワードチェック
                 if (!"".equals(pass)) {
                     File passwordFile = new File(userBox,
-                            Pop3Static.PASSWORD_FILE_NAME);
+                            Constants.PASSWORD_FILE_NAME);
                     if (passwordFile.exists()
                             && passwordFile.isFile()) {
                         BufferedReader passReader = new BufferedReader(
@@ -234,27 +234,27 @@ public class Pop3Handler implements Handler {
                         }
                         passReader.close();
                         if (pass.equals(password)) {
-                            strBuff.append(Pop3Static.RECV_OK_LINE_END);
+                            strBuff.append(Constants.RECV_OK_LINE_END);
                             bPass = true;
                         } else {
                             // パスワード不一致エラー
-                            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                            strBuff.append(Constants.RECV_NG_LINE_END);
                         }
                     } else {
                         // パスワードファイルなしエラー
-                        strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                        strBuff.append(Constants.RECV_NG_LINE_END);
                     }
                 } else {
                     // パスワード入力なしエラー
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
                 // ユーザー存在しないエラー
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // ユーザー名未入力エラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
 
@@ -265,7 +265,7 @@ public class Pop3Handler implements Handler {
     public void stat(String line) {
         if (bPass) {
             // 簡易一覧表示
-            strBuff.append(Pop3Static.RECV_OK);
+            strBuff.append(Constants.RECV_OK);
             strBuff.append(' ');
             long fileLength = 0;
             int fileCnt = 0;
@@ -278,10 +278,10 @@ public class Pop3Handler implements Handler {
             strBuff.append(fileCnt);
             strBuff.append(" ");
             strBuff.append(fileLength);
-            strBuff.append(Pop3Static.RECV_LINE_END);
+            strBuff.append(Constants.RECV_LINE_END);
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -291,21 +291,21 @@ public class Pop3Handler implements Handler {
     public void list(String line) {
         if (bPass) {
             // リスト表示
-            strBuff.append(Pop3Static.RECV_OK_LINE_END);
+            strBuff.append(Constants.RECV_OK_LINE_END);
             for (int i = 0; i < mailList.size(); i++) {
                 File child = mailList.get(i);
                 if (!delList.contains(child)) {
                     strBuff.append(i + 1);
                     strBuff.append(' ');
                     strBuff.append(child.length());
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_LINE_END);
                 }
             }
-            strBuff.append(Pop3Static.RECV_DATA);
-            strBuff.append(Pop3Static.RECV_LINE_END);
+            strBuff.append(Constants.RECV_DATA);
+            strBuff.append(Constants.RECV_LINE_END);
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -320,22 +320,22 @@ public class Pop3Handler implements Handler {
             if (0 <= index && index < mailList.size()) {
                 File child = mailList.get(index);
                 if (!delList.contains(child)) {
-                    strBuff.append(Pop3Static.RECV_OK);
+                    strBuff.append(Constants.RECV_OK);
                     strBuff.append(' ');
                     strBuff.append(line.substring(5));
                     strBuff.append(' ');
                     strBuff.append(child.length());
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_LINE_END);
                 } else {
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
                 // index範囲外
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -345,7 +345,7 @@ public class Pop3Handler implements Handler {
      */
     public void retr(String line) throws IOException {
         if (bPass) {
-            strBuff.append(Pop3Static.RECV_OK_LINE_END);
+            strBuff.append(Constants.RECV_OK_LINE_END);
             for (File child : mailList) {
                 if (!delList.contains(child)) {
                     BufferedReader passReader = new BufferedReader(
@@ -355,18 +355,18 @@ public class Pop3Handler implements Handler {
                     String readLine = passReader.readLine();
                     while (readLine != null) {
                         strBuff.append(readLine);
-                        strBuff.append(Pop3Static.RECV_LINE_END);
+                        strBuff.append(Constants.RECV_LINE_END);
                         
                         readLine = passReader.readLine();
                     }
                     passReader.close();
                 }
             }
-            strBuff.append(Pop3Static.RECV_DATA);
-            strBuff.append(Pop3Static.RECV_LINE_END);
+            strBuff.append(Constants.RECV_DATA);
+            strBuff.append(Constants.RECV_LINE_END);
         } else {
             // エラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -381,10 +381,10 @@ public class Pop3Handler implements Handler {
             if (0 <= index && index < mailList.size()) {
                 File child = mailList.get(index);
                 if (!delList.contains(child)) {
-                    strBuff.append(Pop3Static.RECV_OK);
+                    strBuff.append(Constants.RECV_OK);
                     strBuff.append(' ');
                     strBuff.append(child.length());
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_LINE_END);
                     BufferedReader passReader = new BufferedReader(
                             new InputStreamReader(
                                     new FileInputStream(
@@ -392,23 +392,23 @@ public class Pop3Handler implements Handler {
                     String readLine = passReader.readLine();
                     while (readLine != null) {
                         strBuff.append(readLine);
-                        strBuff.append(Pop3Static.RECV_LINE_END);
+                        strBuff.append(Constants.RECV_LINE_END);
                         
                         readLine = passReader.readLine();
                     }
-                    strBuff.append(Pop3Static.RECV_DATA);
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_DATA);
+                    strBuff.append(Constants.RECV_LINE_END);
                     passReader.close();
                 } else {
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
                 // index範囲外
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // エラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     
@@ -424,14 +424,14 @@ public class Pop3Handler implements Handler {
             if (0 <= index && index < mailList.size()) {
                 File child = mailList.get(index);
                 delList.add(child);
-                strBuff.append(Pop3Static.RECV_OK_LINE_END);
+                strBuff.append(Constants.RECV_OK_LINE_END);
             } else {
                 // index範囲外
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // エラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -443,10 +443,10 @@ public class Pop3Handler implements Handler {
         if (bPass) {
             // 消去マークを無くす
             delList.clear();
-            strBuff.append(Pop3Static.RECV_OK_LINE_END);
+            strBuff.append(Constants.RECV_OK_LINE_END);
         } else {
             // エラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -460,18 +460,18 @@ public class Pop3Handler implements Handler {
                 delFile.delete();
             }
         }
-        strBuff.append(Pop3Static.RECV_OK);
+        strBuff.append(Constants.RECV_OK);
 		strBuff.append(" ");
 		strBuff.append((System.currentTimeMillis() - startTime));
 		strBuff.append("[m/s]");
-        strBuff.append(Pop3Static.RECV_LINE_END);
+        strBuff.append(Constants.RECV_LINE_END);
         finished = true;
     }
     /**
      * NOOP コマンド.
      */
     public void noop(String line) {
-        strBuff.append(Pop3Static.RECV_OK_LINE_END);
+        strBuff.append(Constants.RECV_OK_LINE_END);
         // 何もしない
     }
     /**
@@ -487,7 +487,7 @@ public class Pop3Handler implements Handler {
             if (0 <= index && index < mailList.size()) {
                 File child = mailList.get(index);
                 if (!delList.contains(child)) {
-                    strBuff.append(Pop3Static.RECV_OK_LINE_END);
+                    strBuff.append(Constants.RECV_OK_LINE_END);
                     BufferedReader passReader = new BufferedReader(
                             new InputStreamReader(
                                     new FileInputStream(
@@ -498,7 +498,7 @@ public class Pop3Handler implements Handler {
                     boolean messageHead = true;
                     while (readLine != null && (messageHead || row <= maxRow)) {
                         strBuff.append(readLine);
-                        strBuff.append(Pop3Static.RECV_LINE_END);
+                        strBuff.append(Constants.RECV_LINE_END);
                         
                         readLine = passReader.readLine();
                         if (!messageHead) {
@@ -508,18 +508,18 @@ public class Pop3Handler implements Handler {
                         	messageHead = false;
                         }
                     }
-                    strBuff.append(Pop3Static.RECV_DATA);
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_DATA);
+                    strBuff.append(Constants.RECV_LINE_END);
                     passReader.close();
                 } else {
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     /**
@@ -529,7 +529,7 @@ public class Pop3Handler implements Handler {
     public void uidl(String line) {
         if (bPass) {
             // TRANSACTION 状態でのみ許可される
-            strBuff.append(Pop3Static.RECV_OK_LINE_END);
+            strBuff.append(Constants.RECV_OK_LINE_END);
             for (int i = 0; i < mailList.size(); i++) {
                 File child = mailList.get(i);
                 if (!delList.contains(child)) {
@@ -546,14 +546,14 @@ public class Pop3Handler implements Handler {
                     } else {
                         strBuff.append(name.substring(lastIndex));
                     }
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_LINE_END);
                 }
             }
-            strBuff.append(Pop3Static.RECV_DATA);
-            strBuff.append(Pop3Static.RECV_LINE_END);
+            strBuff.append(Constants.RECV_DATA);
+            strBuff.append(Constants.RECV_LINE_END);
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
 
@@ -569,7 +569,7 @@ public class Pop3Handler implements Handler {
             if (0 <= index && index < mailList.size()) {
                 File child = mailList.get(index);
                 if (!delList.contains(child)) {
-                    strBuff.append(Pop3Static.RECV_OK);
+                    strBuff.append(Constants.RECV_OK);
                     strBuff.append(' ');
                     strBuff.append(lines[1]);
                     strBuff.append(' ');
@@ -584,17 +584,17 @@ public class Pop3Handler implements Handler {
                     } else {
                         strBuff.append(name.substring(lastIndex));
                     }
-                    strBuff.append(Pop3Static.RECV_LINE_END);
+                    strBuff.append(Constants.RECV_LINE_END);
                 } else {
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
                 // index範囲外
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // 認証なしエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
     
@@ -625,7 +625,7 @@ public class Pop3Handler implements Handler {
                                                 dir, name);
                                         if (file.isFile()
                                                 && !file.isHidden()
-                                                && !Pop3Static.PASSWORD_FILE_NAME
+                                                && !Constants.PASSWORD_FILE_NAME
                                                         .equals(name)) {
                                             return true;
                                         }
@@ -642,7 +642,7 @@ public class Pop3Handler implements Handler {
             if (existUser) {
                 // パスワードチェック
                 File passwordFile = new File(userBox,
-                        Pop3Static.PASSWORD_FILE_NAME);
+                        Constants.PASSWORD_FILE_NAME);
                 if (passwordFile.exists()
                         && passwordFile.isFile()) {
                     BufferedReader passReader = new BufferedReader(
@@ -671,23 +671,23 @@ public class Pop3Handler implements Handler {
                                 .toHexString(d));
                     }
                     if (digest.equals(tmpBuff.toString())) {
-                        strBuff.append(Pop3Static.RECV_OK_LINE_END);
+                        strBuff.append(Constants.RECV_OK_LINE_END);
                         bPass = true;
                     } else {
                         // パスワード不一致エラー
-                        strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                        strBuff.append(Constants.RECV_NG_LINE_END);
                     }
                 } else {
                     // パスワードファイルなしエラー
-                    strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                    strBuff.append(Constants.RECV_NG_LINE_END);
                 }
             } else {
                 // ユーザー存在しないエラー
-                strBuff.append(Pop3Static.RECV_NG_LINE_END);
+                strBuff.append(Constants.RECV_NG_LINE_END);
             }
         } else {
             // パスワード認証後に再度パスワード認証はエラー
-            strBuff.append(Pop3Static.RECV_NG_LINE_END);
+            strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
 }
