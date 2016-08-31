@@ -226,15 +226,18 @@ public class Pop3Process implements ServerProcess {
 						Pop3Util.recieveLine(ps, Constants.RECV_OK);
 						for (File child : mailList) {
 							if (!delList.contains(child)) {
-								BufferedReader passReader = new BufferedReader(
+								BufferedReader fileReader = new BufferedReader(
 										new InputStreamReader(
 												new FileInputStream(child)));
-								String readLine = passReader.readLine();
+								String readLine = fileReader.readLine();
 								while (readLine != null) {
+									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
+										ps.write((byte)'.');
+									}
 									Pop3Util.recieveLine(ps, readLine);
-									readLine = passReader.readLine();
+									readLine = fileReader.readLine();
 								}
-								passReader.close();
+								fileReader.close();
 							}
 						}
 						Pop3Util.recieveLine(ps, Constants.RECV_DATA);
@@ -250,16 +253,19 @@ public class Pop3Process implements ServerProcess {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
 								Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", String.valueOf(child.length()));
-								BufferedReader passReader = new BufferedReader(
+								BufferedReader fileReader = new BufferedReader(
 										new InputStreamReader(
 												new FileInputStream(child)));
-								String readLine = passReader.readLine();
+								String readLine = fileReader.readLine();
 								while (readLine != null) {
+									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
+										ps.write((byte)'.');
+									}
 									Pop3Util.recieveLine(ps, readLine);
-									readLine = passReader.readLine();
+									readLine = fileReader.readLine();
 								}
 								Pop3Util.recieveLine(ps, Constants.RECV_DATA);
-								passReader.close();
+								fileReader.close();
 							} else {
 								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
@@ -318,17 +324,17 @@ public class Pop3Process implements ServerProcess {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
 								Pop3Util.recieveLine(ps, Constants.RECV_OK);
-								BufferedReader passReader = new BufferedReader(
+								BufferedReader fileReader = new BufferedReader(
 										new InputStreamReader(
 												new FileInputStream(child)));
-								String readLine = passReader.readLine();
+								String readLine = fileReader.readLine();
 								int maxRow = Integer.parseInt(heads[2]);
 								int row = 0;
 								boolean messageHead = true;
 								while (readLine != null
 										&& (messageHead || row <= maxRow)) {
 									Pop3Util.recieveLine(ps, readLine);
-									readLine = passReader.readLine();
+									readLine = fileReader.readLine();
 									if (!messageHead) {
 										row++;
 									}
@@ -337,7 +343,7 @@ public class Pop3Process implements ServerProcess {
 									}
 								}
 								Pop3Util.recieveLine(ps, Constants.RECV_DATA);
-								passReader.close();
+								fileReader.close();
 							} else {
 								Pop3Util.recieveLine(ps, Constants.RECV_NG);
 							}
