@@ -6,6 +6,9 @@ package com.uchicom.dirpop3;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import com.uchicom.server.AbstractSocketServer;
+import com.uchicom.server.Parameter;
+
 /**
  * マルチスレッドのPOP3サーバー. new Threadを実施している.
  *
@@ -17,7 +20,7 @@ public class MultiPop3Server extends AbstractSocketServer {
 	/**
 	 * @param parameter
 	 */
-	public MultiPop3Server(Pop3Parameter parameter) {
+	public MultiPop3Server(Parameter parameter) {
 		super(parameter);
 	}
 

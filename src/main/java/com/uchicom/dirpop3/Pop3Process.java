@@ -20,12 +20,15 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-public class Pop3Process {
+import com.uchicom.server.Parameter;
+import com.uchicom.server.ServerProcess;
+
+public class Pop3Process implements ServerProcess {
 
 	/** ファイルとUIDLで使用する日時フォーマット */
 	private final SimpleDateFormat format = new SimpleDateFormat(
 			Constants.DATE_TIME_MILI_FORMAT);
-	private Pop3Parameter parameter;
+	private Parameter parameter;
 	private Socket socket;
 
 	protected FileComparator comparator = new FileComparator();
@@ -40,7 +43,7 @@ public class Pop3Process {
 	 * @param socket
 	 * @throws IOException
 	 */
-	public Pop3Process(Pop3Parameter parameter, Socket socket)
+	public Pop3Process(Parameter parameter, Socket socket)
 			throws IOException {
 		this.parameter = parameter;
 		this.socket = socket;
@@ -54,7 +57,7 @@ public class Pop3Process {
 				+ String.valueOf(socket.getRemoteSocketAddress()));
 		// 0.はプロセスごとに変える番号だけど、とくに複数プロセスを持っていないので。
 		String timestamp = "<" + Thread.currentThread().getId() + "."
-				+ System.currentTimeMillis() + "@" + parameter.getHostName()
+				+ System.currentTimeMillis() + "@" + parameter.get("hostName")
 				+ ">";
 		BufferedReader br = null;
 		PrintStream ps = null;
@@ -87,7 +90,7 @@ public class Pop3Process {
 						pass = line.split(" ")[1];
 						// ユーザーチェック
 						boolean existUser = false;
-						for (File box : parameter.getBase().listFiles()) {
+						for (File box : parameter.getFile("dir").listFiles()) {
 							if (box.isDirectory()) {
 								if (user.equals(box.getName())) {
 									userBox = box;
@@ -419,7 +422,7 @@ public class Pop3Process {
 						String digest = heads[2];
 						// ユーザーチェック
 						boolean existUser = false;
-						for (File box : parameter.getBase().listFiles()) {
+						for (File box : parameter.getFile("dir").listFiles()) {
 							if (box.isDirectory()) {
 								if (user.equals(box.getName())) {
 									userBox = box;

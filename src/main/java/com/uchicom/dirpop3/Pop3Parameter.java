@@ -3,30 +3,19 @@
  */
 package com.uchicom.dirpop3;
 
-import java.io.File;
 import java.io.PrintStream;
+
+import com.uchicom.server.Parameter;
+import com.uchicom.server.Server;
 
 /**
  * @author uchicom: Shigeki Uchiyama
  *
  */
-public class Pop3Parameter {
-	/** メールボックスの基準フォルダ */
-    private File base = Constants.DEFAULT_MAILBOX;;
-	/** ホスト名 */
-	private String hostName = "localhost";
-	/** 待ち受けポート */
-    private int port = Constants.DEFAULT_PORT;
-	/** 受信する接続 (接続要求) のキューの最大長 */
-    private int backlog = Constants.DEFAULT_BACK;
-	/** プールするスレッド数 */
-    private int pool = Constants.DEFAULT_POOL;
-    /** 実行するサーバのタイプ */
-    private String type = "single";
+public class Pop3Parameter extends Parameter {
 
-    private String[] args;
     public Pop3Parameter(String[] args) {
-        this.args = args;
+    	super(args);
     }
 
     /**
@@ -35,56 +24,37 @@ public class Pop3Parameter {
      * @return
      */
     public boolean init(PrintStream ps) {
-    	for (int i = 0; i < args.length - 1; i++) {
-			switch (args[i]) {
-			case "-type":// サーバタイプ
-				this.type = args[++i];
-				break;
-			case "-dir":// メールフォルダ格納フォルダ
-				base = new File(args[++i]);
-				if (!base.exists() || !base.isDirectory()) {
-					ps.println("mailbox directory is not found.");
-					return false;
-				}
-				break;
-			case "-host":// ホスト名
-				hostName = args[++i];
-				break;
-			case "-port":// ポート
-				port = Integer.parseInt(args[++i]);
-				break;
-			case "-back":// 接続待ち数
-				backlog = Integer.parseInt(args[++i]);
-				break;
-			case "-pool":// スレッドプール数
-				pool = Integer.parseInt(args[++i]);
-				break;
-			}
-		}
+    	// メールボックスの基準フォルダ
+    	if (!is("dir")) {
+    		put("dir", Constants.DEFAULT_MAILBOX);
+    	}
+        // 実行するサーバのタイプ
+    	if (!is("type")) {
+    		put("type", "single");
+    	}
+    	// ホスト名
+    	if (!is("host")) {
+    		put("host", "localhost");
+    	}
+    	// 待ち受けポート
+    	if (!is("port")) {
+    		put("port", Constants.DEFAULT_PORT);
+    	}
+    	// 受信する接続 (接続要求) のキューの最大長
+    	if (!is("back")) {
+    		put("back", Constants.DEFAULT_BACK);
+    	}
+    	// プールするスレッド数
+    	if (!is("pool")) {
+    		put("pool", Constants.DEFAULT_POOL);
+    	}
 
         return true;
     }
 
-    public String getHostName() {
-        return hostName;
-    }
-
-    public int getPort() {
-        return port;
-    }
-    public int getBacklog() {
-        return backlog;
-    }
-    public File getBase() {
-        return base;
-    }
-    public int getPool() {
-        return pool;
-    }
-
     public Server createServer() {
     	Server server = null;
-		switch (type) {
+		switch (get("type")) {
 		case "multi":
 			server = new MultiPop3Server(this);
 		case "pool":

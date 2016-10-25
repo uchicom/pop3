@@ -8,6 +8,9 @@ import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.uchicom.server.AbstractSocketServer;
+import com.uchicom.server.Parameter;
+
 /**
  * マルチスレッドのPOP3サーバー. スレッドプールを使用.
  *
@@ -20,9 +23,9 @@ public class PoolPop3Server extends AbstractSocketServer {
 	/**
 	 * @param parameter
 	 */
-	public PoolPop3Server(Pop3Parameter parameter) {
+	public PoolPop3Server(Parameter parameter) {
 		super(parameter);
-		exec = Executors.newFixedThreadPool(parameter.getPool());
+		exec = Executors.newFixedThreadPool(parameter.getInt("pool"));
 	}
 
 	/**

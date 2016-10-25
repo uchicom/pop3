@@ -6,12 +6,12 @@ package com.uchicom.dirpop3;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.uchicom.server.AbstractSelectorServer;
+import com.uchicom.server.Handler;
+import com.uchicom.server.Parameter;
 
 /**
  * Channelを利用したPOP3サーバー
@@ -22,15 +22,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class SelectorPop3Server extends AbstractSelectorServer {
 
 
-	protected static Queue<ServerSocketChannel> serverQueue = new ConcurrentLinkedQueue<ServerSocketChannel>();
+	private static boolean alive = true;
+
 	/**
 	 * @param parameter
 	 */
-	public SelectorPop3Server(Pop3Parameter parameter) {
-		super(parameter);
+	public SelectorPop3Server(Parameter parameter) {
+		super(parameter, new Pop3HandlerFactory(parameter));
 	}
 
-	private static boolean alive = true;
 
 	/**
 	 * メイン処理
@@ -52,9 +52,6 @@ public class SelectorPop3Server extends AbstractSelectorServer {
 							key.cancel();
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
-						key.cancel();
-					} catch (NoSuchAlgorithmException e) {
 						e.printStackTrace();
 						key.cancel();
 					}

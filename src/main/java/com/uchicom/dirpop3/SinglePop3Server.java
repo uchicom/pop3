@@ -6,6 +6,9 @@ package com.uchicom.dirpop3;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import com.uchicom.server.AbstractSocketServer;
+import com.uchicom.server.Parameter;
+
 /**
  * POP3サーバー
  * シングルスレッド.
@@ -14,7 +17,7 @@ import java.net.ServerSocket;
  */
 public class SinglePop3Server extends  AbstractSocketServer {
 
-	public SinglePop3Server(Pop3Parameter parameter) {
+	public SinglePop3Server(Parameter parameter) {
 		super(parameter);
 	}
 	/** メイン処理

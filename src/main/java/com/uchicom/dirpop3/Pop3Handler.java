@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.uchicom.server.Handler;
+
 
 /**
  * 出力時に一度全てバッファに溜め込むので負荷があがってしまう。
@@ -42,7 +44,7 @@ public class Pop3Handler implements Handler {
     /** 終了フラグ */
     boolean finished;
     long startTime = System.currentTimeMillis();
-    
+
     /** ユーザー名 */
     String user;
     /** パスワード */
@@ -76,7 +78,7 @@ public class Pop3Handler implements Handler {
      * @see com.uchicom.dirpop3.Handler#handle(java.nio.channels.SelectionKey)
      */
     @Override
-    public void handle(SelectionKey key) throws IOException, NoSuchAlgorithmException {
+    public void handle(SelectionKey key) throws IOException {
         SocketChannel channel = (SocketChannel) key.channel();
         if (key.isReadable()) {
             int length = channel.read(readBuff);
@@ -111,7 +113,13 @@ public class Pop3Handler implements Handler {
                 } else if (line.matches(Constants.REG_EXP_UIDL_NUM)) {
                     uidlNum(line);
                 } else if (line.matches(Constants.REG_EXP_APOP_NAME_DIGEST)) {
-                    apopNameDigest(line);
+                    try {
+						apopNameDigest(line);
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+	                    strBuff.append(Constants.RECV_NG_CMD_NOT_FOUND);
+	                    strBuff.append(Constants.RECV_LINE_END);
+					}
                 } else if ("".equals(line)) {
                     // 何もしない
                 } else {
@@ -143,7 +151,7 @@ public class Pop3Handler implements Handler {
             }
         }
     }
-    
+
     /**
      * コマンド行が入力されたかどうかチェックする.
      * @return
@@ -161,7 +169,7 @@ public class Pop3Handler implements Handler {
         String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
         return line.substring(0, line.indexOf("\r\n"));
     }
-    
+
     /**
      * USERコマンド.
      * @param line
@@ -171,7 +179,7 @@ public class Pop3Handler implements Handler {
         user = line.split(" ")[1];
         strBuff.append(Constants.RECV_OK_LINE_END);
     }
-    
+
     /**
      * PASS コマンド.
      * @param line
@@ -210,7 +218,7 @@ public class Pop3Handler implements Handler {
                         mailList = Arrays.asList(mails);
                         Collections.sort(mailList, FileComparator.instance);
                         delList = new ArrayList<File>();
-                        
+
                         existUser = true;
                     }
                 }
@@ -356,7 +364,7 @@ public class Pop3Handler implements Handler {
                     while (readLine != null) {
                         strBuff.append(readLine);
                         strBuff.append(Constants.RECV_LINE_END);
-                        
+
                         readLine = passReader.readLine();
                     }
                     passReader.close();
@@ -393,7 +401,7 @@ public class Pop3Handler implements Handler {
                     while (readLine != null) {
                         strBuff.append(readLine);
                         strBuff.append(Constants.RECV_LINE_END);
-                        
+
                         readLine = passReader.readLine();
                     }
                     strBuff.append(Constants.RECV_DATA);
@@ -411,7 +419,7 @@ public class Pop3Handler implements Handler {
             strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
-    
+
     /**
      * DELE コマンド.
      * @param line
@@ -499,7 +507,7 @@ public class Pop3Handler implements Handler {
                     while (readLine != null && (messageHead || row <= maxRow)) {
                         strBuff.append(readLine);
                         strBuff.append(Constants.RECV_LINE_END);
-                        
+
                         readLine = passReader.readLine();
                         if (!messageHead) {
                             row++;
@@ -597,7 +605,7 @@ public class Pop3Handler implements Handler {
             strBuff.append(Constants.RECV_NG_LINE_END);
         }
     }
-    
+
     /**
      * APOP ユーザー名 ダイジェスト コマンド.
      * @param line

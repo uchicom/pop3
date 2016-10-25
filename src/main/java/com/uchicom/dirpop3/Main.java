@@ -3,6 +3,8 @@
  */
 package com.uchicom.dirpop3;
 
+import com.uchicom.server.Server;
+
 /**
  * 起動クラス.
  *

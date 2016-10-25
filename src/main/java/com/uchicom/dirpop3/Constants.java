@@ -3,15 +3,13 @@
  */
 package com.uchicom.dirpop3;
 
-import java.io.File;
-
 /**
  * POP3に関する定数クラス
  * @author Uchiyama Shigeki
- * 
+ *
  */
 public class Constants {
-    
+
     /** デバッグフラグ */
 
     public static final boolean DEBUG = true;
@@ -67,8 +65,8 @@ public class Constants {
 	public static String REG_EXP_APOP_NAME_DIGEST = "^[Aa][Pp][Oo][Pp] +[^ ]+ +[^ ]+ *$";
 	/** CAPAの正規表現(大文字小文字後続スペース) */
     public static String REG_EXP_CAPA = "^[Cc][Aa][Pp][Aa] *$";
-	
-	
+
+
 	//POP3 STARTTLS拡張コマンド
 	/** STLSの正規表現(大文字小文字後続スペース) */
     public static String REG_EXP_STLS = "^[Ss][Tt][Ll][Ss] *$";
@@ -78,15 +76,15 @@ public class Constants {
 
 	/** パスワードファイルのパス */
 	public static String PASSWORD_FILE_NAME = "pass.txt";
-	
+
 	//初期設定
 	/** デフォルトメールボックスディレクトリ */
-    public static File DEFAULT_MAILBOX = new File("mailbox");
+    public static String DEFAULT_MAILBOX = "mailbox";
     /** デフォルト待ち受けポート番号 */
-    public static int DEFAULT_PORT = 8110;
+    public static String DEFAULT_PORT = "8110";
     /** デフォルト接続待ち数 */
-	public static int DEFAULT_BACK = 10;
+	public static String DEFAULT_BACK = "10";
 	/** デフォルトスレッドプール数 */
-	public static int DEFAULT_POOL = 10;
+	public static String DEFAULT_POOL = "10";
 
 }
