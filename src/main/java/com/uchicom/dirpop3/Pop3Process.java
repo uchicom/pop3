@@ -43,8 +43,7 @@ public class Pop3Process implements ServerProcess {
 	 * @param socket
 	 * @throws IOException
 	 */
-	public Pop3Process(Parameter parameter, Socket socket)
-			throws IOException {
+	public Pop3Process(Parameter parameter, Socket socket) {
 		this.parameter = parameter;
 		this.socket = socket;
 	}

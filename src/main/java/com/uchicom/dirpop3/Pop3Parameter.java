@@ -5,8 +5,12 @@ package com.uchicom.dirpop3;
 
 import java.io.PrintStream;
 
+import com.uchicom.server.MultiSocketServer;
 import com.uchicom.server.Parameter;
+import com.uchicom.server.PoolSocketServer;
+import com.uchicom.server.SelectorServer;
 import com.uchicom.server.Server;
+import com.uchicom.server.SingleSocketServer;
 
 /**
  * @author uchicom: Shigeki Uchiyama
@@ -56,15 +60,24 @@ public class Pop3Parameter extends Parameter {
     	Server server = null;
 		switch (get("type")) {
 		case "multi":
-			server = new MultiPop3Server(this);
+			server = new MultiSocketServer(this, (a, b)->{
+				return new Pop3Process(a, b);
+			});
+			break;
 		case "pool":
-			server = new PoolPop3Server(this);
+			server = new PoolSocketServer(this, (a, b)->{
+				return new Pop3Process(a, b);
+			});
 			break;
 		case "single":
-			server = new SinglePop3Server(this);
+			server = new SingleSocketServer(this, (a, b)->{
+				return new Pop3Process(a, b);
+			});
 			break;
 		case "selector":
-			server = new SelectorPop3Server(this);
+			server = new SelectorServer(this, ()->{
+				return new Pop3Handler(getFile("dir"), get("host"));
+			});
 			break;
 		}
     	return server;
