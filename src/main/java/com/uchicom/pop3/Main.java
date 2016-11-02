@@ -1,7 +1,7 @@
 /**
  * (c) 2016 uchicom
  */
-package com.uchicom.dirpop3;
+package com.uchicom.pop3;
 
 /**
  * 起動クラス.

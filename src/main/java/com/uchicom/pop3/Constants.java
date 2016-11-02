@@ -1,7 +1,7 @@
 /**
  * (c) 2012 uchicom
  */
-package com.uchicom.dirpop3;
+package com.uchicom.pop3;
 
 /**
  * POP3に関する定数クラス

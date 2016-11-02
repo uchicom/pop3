@@ -1,7 +1,7 @@
 /**
  * (c) 2013 uchicom
  */
-package com.uchicom.dirpop3;
+package com.uchicom.pop3;
 
 import java.io.File;
 import java.util.Comparator;
