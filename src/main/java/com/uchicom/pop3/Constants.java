@@ -45,6 +45,8 @@ public class Constants {
 	public static String REG_EXP_LIST_NUM = "^[Ll][Ii][Ss][Tt] +[1-9][0-9]* *$";
 	/** RETRの正規表現(大文字小文字後続スペース) */
 	public static String REG_EXP_RETR = "^[Rr][Ee][Tt][Rr] *$";
+	/** GRETの正規表現(大文字小文字後続スペース):独自拡張gz圧縮して転送する */
+	public static String REG_EXP_GRET = "^[Gr][Rr][Ee][Tt] *$";
 	/** RETR 数値の正規表現(大文字小文字後続スペース) */
 	public static String REG_EXP_RETR_NUM = "^[Rr][Ee][Tt][Rr] +[1-9][0-9]* *$";
 	/** DELE 数値の正規表現(大文字小文字後続スペース) */

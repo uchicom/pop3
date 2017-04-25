@@ -236,6 +236,7 @@ public class Pop3Process implements ServerProcess {
 									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
+									lastTime = System.currentTimeMillis();
 								}
 								fileReader.close();
 							}
@@ -263,6 +264,7 @@ public class Pop3Process implements ServerProcess {
 									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
+									lastTime = System.currentTimeMillis();
 								}
 								Pop3Util.recieveLine(ps, Constants.RECV_DATA);
 								fileReader.close();
