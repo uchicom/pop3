@@ -77,7 +77,7 @@ public class Constants {
 	public static String DATE_TIME_MILI_FORMAT = "yyyyMMdd_HHmmss.SSS";
 
 	/** パスワードファイルのパス */
-	public static String PASSWORD_FILE_NAME = ".pass";
+	public static String PASSWORD_FILE_NAME = ".pop3";
 
 	//初期設定
 	/** デフォルトメールボックスディレクトリ */
