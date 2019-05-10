@@ -3,8 +3,6 @@
  */
 package com.uchicom.pop3;
 
-import java.io.PrintStream;
-
 import com.uchicom.server.MultiSocketServer;
 import com.uchicom.server.PoolSocketServer;
 import com.uchicom.server.SelectorServer;
@@ -27,7 +25,7 @@ public class Pop3Parameter extends Parameter {
      * @param ps
      * @return
      */
-    public boolean init(PrintStream ps) {
+    public boolean init() {
     	// メールボックスの基準フォルダ
     	if (!is("dir")) {
     		put("dir", Constants.DEFAULT_MAILBOX);

@@ -17,17 +17,18 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.uchicom.server.ServerProcess;
 import com.uchicom.util.Parameter;
 
 public class Pop3Process implements ServerProcess {
 
+	private static final Logger logger = Logger.getLogger(Pop3Process.class.getCanonicalName());
+
 	/** ファイルとUIDLで使用する日時フォーマット */
-	private final SimpleDateFormat format = new SimpleDateFormat(
-			Constants.DATE_TIME_MILI_FORMAT);
+	private final SimpleDateFormat format = new SimpleDateFormat(Constants.DATE_TIME_MILI_FORMAT);
 	private Parameter parameter;
 	private Socket socket;
 
@@ -52,17 +53,14 @@ public class Pop3Process implements ServerProcess {
 	 * pop3処理.
 	 */
 	public void execute() {
-		Pop3Util.log(format.format(new Date()) + ":"
-				+ String.valueOf(socket.getRemoteSocketAddress()));
+		logger.info(String.valueOf(socket.getRemoteSocketAddress()));
 		// 0.はプロセスごとに変える番号だけど、とくに複数プロセスを持っていないので。
-		String timestamp = "<" + Thread.currentThread().getId() + "."
-				+ System.currentTimeMillis() + "@" + parameter.get("hostName")
-				+ ">";
+		String timestamp = "<" + Thread.currentThread().getId() + "." + System.currentTimeMillis() + "@"
+				+ parameter.get("hostName") + ">";
 		BufferedReader br = null;
 		PrintStream ps = null;
 		try {
-			br = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
+			br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			ps = new PrintStream(socket.getOutputStream());
 			// 1接続に対する受付開始
 			Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
@@ -93,25 +91,19 @@ public class Pop3Process implements ServerProcess {
 							if (box.isDirectory()) {
 								if (user.equals(box.getName())) {
 									userBox = box;
-									File[] mails = userBox
-											.listFiles(new FilenameFilter() {
+									File[] mails = userBox.listFiles(new FilenameFilter() {
 
-												@Override
-												public boolean accept(File dir,
-														String name) {
-													File file = new File(dir,
-															name);
-													if (file.isFile()
-															&& !file.isHidden()
-															&& file.canRead()
-															&& !Constants.PASSWORD_FILE_NAME
-																	.equals(name)) {
-														return true;
-													}
-													return false;
-												}
+										@Override
+										public boolean accept(File dir, String name) {
+											File file = new File(dir, name);
+											if (file.isFile() && !file.isHidden() && file.canRead()
+													&& !Constants.PASSWORD_FILE_NAME.equals(name)) {
+												return true;
+											}
+											return false;
+										}
 
-											});
+									});
 
 									mailList = Arrays.asList(mails);
 									Collections.sort(mailList, comparator);
@@ -124,14 +116,10 @@ public class Pop3Process implements ServerProcess {
 						if (existUser) {
 							// パスワードチェック
 							if (!"".equals(pass)) {
-								File passwordFile = new File(userBox,
-										Constants.PASSWORD_FILE_NAME);
-								if (passwordFile.exists()
-										&& passwordFile.isFile()) {
+								File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
+								if (passwordFile.exists() && passwordFile.isFile()) {
 									BufferedReader passReader = new BufferedReader(
-											new InputStreamReader(
-													new FileInputStream(
-															passwordFile)));
+											new InputStreamReader(new FileInputStream(passwordFile)));
 									String password = passReader.readLine();
 									while ("".equals(password)) {
 										password = passReader.readLine();
@@ -139,13 +127,11 @@ public class Pop3Process implements ServerProcess {
 									passReader.close();
 									if (pass.equals(password)) {
 
-										Pop3Util.recieveLine(ps,
-												Constants.RECV_OK);
+										Pop3Util.recieveLine(ps, Constants.RECV_OK);
 										bPass = true;
 									} else {
 										// パスワード不一致エラー
-										Pop3Util.recieveLine(ps,
-												Constants.RECV_NG);
+										Pop3Util.recieveLine(ps, Constants.RECV_NG);
 									}
 								} else {
 									// パスワードファイルなしエラー
@@ -174,8 +160,7 @@ public class Pop3Process implements ServerProcess {
 								fileCnt++;
 							}
 						}
-						Pop3Util.recieveLine(ps, Constants.RECV_OK, " ",
-								String.valueOf(fileCnt), " ",
+						Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", String.valueOf(fileCnt), " ",
 								String.valueOf(fileLength));
 					} else {
 						// 認証なしエラー
@@ -189,8 +174,7 @@ public class Pop3Process implements ServerProcess {
 							File child = mailList.get(i);
 							if (!delList.contains(child)) {
 
-								Pop3Util.recieveLine(ps, String.valueOf(i + 1),
-										" ", String.valueOf(child.length()));
+								Pop3Util.recieveLine(ps, String.valueOf(i + 1), " ", String.valueOf(child.length()));
 							}
 						}
 						Pop3Util.recieveLine(ps, Constants.RECV_DATA);
@@ -207,8 +191,7 @@ public class Pop3Process implements ServerProcess {
 						if (0 <= index && index < mailList.size()) {
 							File child = mailList.get(index);
 							if (!delList.contains(child)) {
-								Pop3Util.recieveLine(ps, Constants.RECV_OK,
-										" ", line.substring(5), " ",
+								Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", line.substring(5), " ",
 										String.valueOf(child.length()));
 							} else {
 								Pop3Util.recieveLine(ps, Constants.RECV_NG);
@@ -227,12 +210,11 @@ public class Pop3Process implements ServerProcess {
 						for (File child : mailList) {
 							if (!delList.contains(child)) {
 								BufferedReader fileReader = new BufferedReader(
-										new InputStreamReader(
-												new FileInputStream(child)));
+										new InputStreamReader(new FileInputStream(child)));
 								String readLine = fileReader.readLine();
 								while (readLine != null) {
 									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
-										ps.write((byte)'.');
+										ps.write((byte) '.');
 									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
@@ -255,12 +237,11 @@ public class Pop3Process implements ServerProcess {
 							if (!delList.contains(child)) {
 								Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", String.valueOf(child.length()));
 								BufferedReader fileReader = new BufferedReader(
-										new InputStreamReader(
-												new FileInputStream(child)));
+										new InputStreamReader(new FileInputStream(child)));
 								String readLine = fileReader.readLine();
 								while (readLine != null) {
 									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
-										ps.write((byte)'.');
+										ps.write((byte) '.');
 									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
@@ -327,14 +308,12 @@ public class Pop3Process implements ServerProcess {
 							if (!delList.contains(child)) {
 								Pop3Util.recieveLine(ps, Constants.RECV_OK);
 								BufferedReader fileReader = new BufferedReader(
-										new InputStreamReader(
-												new FileInputStream(child)));
+										new InputStreamReader(new FileInputStream(child)));
 								String readLine = fileReader.readLine();
 								int maxRow = Integer.parseInt(heads[2]);
 								int row = 0;
 								boolean messageHead = true;
-								while (readLine != null
-										&& (messageHead || row <= maxRow)) {
+								while (readLine != null && (messageHead || row <= maxRow)) {
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
 									if (!messageHead) {
@@ -433,22 +412,17 @@ public class Pop3Process implements ServerProcess {
 							if (box.isDirectory()) {
 								if (user.equals(box.getName())) {
 									userBox = box;
-									File[] mails = userBox
-											.listFiles(new FilenameFilter() {
-												@Override
-												public boolean accept(File dir,
-														String name) {
-													File file = new File(dir,
-															name);
-													if (file.isFile()
-															&& !file.isHidden()
-															&& !Constants.PASSWORD_FILE_NAME
-																	.equals(name)) {
-														return true;
-													}
-													return false;
-												}
-											});
+									File[] mails = userBox.listFiles(new FilenameFilter() {
+										@Override
+										public boolean accept(File dir, String name) {
+											File file = new File(dir, name);
+											if (file.isFile() && !file.isHidden()
+													&& !Constants.PASSWORD_FILE_NAME.equals(name)) {
+												return true;
+											}
+											return false;
+										}
+									});
 									mailList = Arrays.asList(mails);
 									Collections.sort(mailList, comparator);
 									delList = new ArrayList<File>();
@@ -458,21 +432,17 @@ public class Pop3Process implements ServerProcess {
 						}
 						if (existUser) {
 							// パスワードチェック
-							File passwordFile = new File(userBox,
-									Constants.PASSWORD_FILE_NAME);
+							File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
 							if (passwordFile.exists() && passwordFile.isFile()) {
 								BufferedReader passReader = new BufferedReader(
-										new InputStreamReader(
-												new FileInputStream(
-														passwordFile)));
+										new InputStreamReader(new FileInputStream(passwordFile)));
 								String password = passReader.readLine();
 								while ("".equals(password)) {
 									password = passReader.readLine();
 								}
 								passReader.close();
 								// ダイジェストとタイムスタンプを元にダイジェストを作成
-								MessageDigest md = MessageDigest
-										.getInstance("MD5");
+								MessageDigest md = MessageDigest.getInstance("MD5");
 								md.update((timestamp + password).getBytes());
 								byte[] passBytes = md.digest();
 								StringBuffer strBuff = new StringBuffer(32);
@@ -505,7 +475,7 @@ public class Pop3Process implements ServerProcess {
 				} else if (line.length() == 0 || Pop3Util.isNoop(line)) {
 					// 何もしない
 				} else {
-					//コマンドエラー
+					// コマンドエラー
 					Pop3Util.recieveLine(ps, Constants.RECV_NG_CMD_NOT_FOUND);
 				}
 				lastTime = System.currentTimeMillis();
@@ -543,6 +513,7 @@ public class Pop3Process implements ServerProcess {
 				}
 			}
 		}
+		logger.info("end");
 	}
 
 	/**
@@ -558,11 +529,11 @@ public class Pop3Process implements ServerProcess {
 	 * 強制終了.
 	 */
 	public void forceClose() {
-		//		if (rejectMap.containsKey(senderAddress)) {
-		//			rejectMap.put(senderAddress, rejectMap.get(senderAddress) + 1);
-		//		} else {
-		//			rejectMap.put(senderAddress, 1);
-		//		}
+		// if (rejectMap.containsKey(senderAddress)) {
+		// rejectMap.put(senderAddress, rejectMap.get(senderAddress) + 1);
+		// } else {
+		// rejectMap.put(senderAddress, 1);
+		// }
 		System.out.println("forceClose!");
 		if (socket != null && socket.isConnected()) {
 			try {

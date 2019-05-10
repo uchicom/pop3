@@ -175,9 +175,4 @@ public class Pop3Util {
 		ps.flush();
 	}
 	
-	public static void log(String string) {
-		if (Constants.DEBUG) {
-			System.out.println(string);
-		}
-	}
 }
