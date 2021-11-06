@@ -13,7 +13,7 @@ import java.io.PrintStream;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
+//import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,7 +28,7 @@ public class Pop3Process implements ServerProcess {
 	private static final Logger logger = Logger.getLogger(Pop3Process.class.getCanonicalName());
 
 	/** ファイルとUIDLで使用する日時フォーマット */
-	private final SimpleDateFormat format = new SimpleDateFormat(Constants.DATE_TIME_MILI_FORMAT);
+//	private final SimpleDateFormat format = new SimpleDateFormat(Constants.DATE_TIME_MILI_FORMAT);
 	private Parameter parameter;
 	private Socket socket;
 
@@ -213,9 +213,6 @@ public class Pop3Process implements ServerProcess {
 										new InputStreamReader(new FileInputStream(child)));
 								String readLine = fileReader.readLine();
 								while (readLine != null) {
-									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
-										ps.write((byte) '.');
-									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
 									lastTime = System.currentTimeMillis();
@@ -240,9 +237,6 @@ public class Pop3Process implements ServerProcess {
 										new InputStreamReader(new FileInputStream(child)));
 								String readLine = fileReader.readLine();
 								while (readLine != null) {
-									if (readLine.length() > 0 && readLine.charAt(0) == '.') {
-										ps.write((byte) '.');
-									}
 									Pop3Util.recieveLine(ps, readLine);
 									readLine = fileReader.readLine();
 									lastTime = System.currentTimeMillis();
