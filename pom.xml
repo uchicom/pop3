@@ -292,6 +292,6 @@
             <artifactId>assertj-core</artifactId>
             <version>3.22.0</version>
             <scope>test</scope>
-        </dependency
+        </dependency>
 	</dependencies>
 </project>
