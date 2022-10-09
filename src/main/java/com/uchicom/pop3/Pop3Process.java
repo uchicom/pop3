@@ -47,9 +47,8 @@ public class Pop3Process implements ServerProcess {
   /**
    * コンストラクタ.
    *
-   * @param parameter
-   * @param socket
-   * @throws IOException
+   * @param parameter パラメータ
+   * @param socket 入出力ソケット
    */
   public Pop3Process(Parameter parameter, Socket socket) {
     this.parameter = parameter;

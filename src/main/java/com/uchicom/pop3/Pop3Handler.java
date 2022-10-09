@@ -61,8 +61,8 @@ public class Pop3Handler implements Handler {
   /**
    * 設定を保持するコンストラクタ.
    *
-   * @param base
-   * @param hostName
+   * @param base 基本パス
+   * @param hostName ホスト名
    */
   public Pop3Handler(File base, String hostName) {
     this.base = base;
@@ -159,7 +159,7 @@ public class Pop3Handler implements Handler {
   /**
    * コマンド行が入力されたかどうかチェックする.
    *
-   * @return
+   * @return コマンド行が入力された場合にtrue,それ以外はfalseを返します
    */
   public boolean checkCmd() {
     String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
@@ -168,7 +168,7 @@ public class Pop3Handler implements Handler {
   /**
    * コマンド行から文字列を取得する. \r\nは除外する.
    *
-   * @return
+   * @return コマンド行から取得した文字列を返します
    */
   public String getCmd() {
     String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
@@ -178,7 +178,7 @@ public class Pop3Handler implements Handler {
   /**
    * USERコマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void user(String line) {
     bUser = true;
@@ -189,8 +189,8 @@ public class Pop3Handler implements Handler {
   /**
    * PASS コマンド.
    *
-   * @param line
-   * @throws IOException
+   * @param line コマンド行
+   * @throws IOException パスワードファイル読み取り時に発生
    */
   public void pass(String line) throws IOException {
     if (bUser && !bPass) {
@@ -266,7 +266,7 @@ public class Pop3Handler implements Handler {
   /**
    * STATコマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void stat(String line) {
     if (bPass) {
@@ -293,7 +293,7 @@ public class Pop3Handler implements Handler {
   /**
    * LIST コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void list(String line) {
     if (bPass) {
@@ -318,7 +318,7 @@ public class Pop3Handler implements Handler {
   /**
    * LIST メッセージ番号 コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void listNum(String line) {
     if (bPass) {
@@ -349,8 +349,8 @@ public class Pop3Handler implements Handler {
   /**
    * RETR コマンド.
    *
-   * @param line
-   * @throws IOException
+   * @param line コマンド行
+   * @throws IOException メールファイル読み取り時
    */
   public void retr(String line) throws IOException {
     if (bPass) {
@@ -379,8 +379,8 @@ public class Pop3Handler implements Handler {
   /**
    * RETR メッセージ番号コマンド.
    *
-   * @param line
-   * @throws IOException
+   * @param line コマンド行
+   * @throws IOException メールファイル読み取り時
    */
   public void retrNum(String line) throws IOException {
     if (bPass) {
@@ -421,7 +421,7 @@ public class Pop3Handler implements Handler {
   /**
    * DELE コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void deleNum(String line) {
     if (bPass) {
@@ -444,7 +444,7 @@ public class Pop3Handler implements Handler {
   /**
    * RSET コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void rset(String line) {
     // リセット
@@ -460,7 +460,7 @@ public class Pop3Handler implements Handler {
   /**
    * QUIT コマンド.
    *
-   * @param line
+   * @param line　コマンド行
    */
   public void quit(String line) {
     if (delList != null) {
@@ -484,8 +484,8 @@ public class Pop3Handler implements Handler {
   /**
    * TOP メッセージ番号 行数 コマンド.
    *
-   * @param line
-   * @throws IOException
+   * @param line コマンド行
+   * @throws IOException メールファイル読み取り時
    */
   public void topNumNum(String line) throws IOException {
     if (bPass) {
@@ -531,7 +531,7 @@ public class Pop3Handler implements Handler {
   /**
    * UIDL コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void uidl(String line) {
     if (bPass) {
@@ -567,7 +567,7 @@ public class Pop3Handler implements Handler {
   /**
    * UIDL メッセージ番号 コマンド.
    *
-   * @param line
+   * @param line コマンド行
    */
   public void uidlNum(String line) {
     if (bPass) {
@@ -609,9 +609,9 @@ public class Pop3Handler implements Handler {
   /**
    * APOP ユーザー名 ダイジェスト コマンド.
    *
-   * @param line
-   * @throws IOException
-   * @throws NoSuchAlgorithmException
+   * @param line コマンド行
+   * @throws IOException パスワードファイル読み取り時
+   * @throws NoSuchAlgorithmException ダイジェスト作成時
    */
   public void apopNameDigest(String line) throws IOException, NoSuchAlgorithmException {
     if (!bPass) {
