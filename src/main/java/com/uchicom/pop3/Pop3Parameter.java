@@ -18,8 +18,7 @@ public class Pop3Parameter extends Parameter {
   /**
    * 初期化
    *
-   * @param ps
-   * @return
+   * @return 必ずtrueを返却します.
    */
   public boolean init() {
     // メールボックスの基準フォルダ
