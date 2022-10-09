@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.uchicom</groupId>
 	<artifactId>pop3</artifactId>
-	<version>0.1.0</version>
+	<version>0.0.1</version>
 	<packaging>jar</packaging>
 	<name>pop3</name>
 	<description>pop3 server</description>

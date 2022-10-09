@@ -6,18 +6,28 @@ import com.uchicom.util.Parameter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 public class Pop3Process implements ServerProcess {
 
@@ -79,7 +89,12 @@ public class Pop3Process implements ServerProcess {
       // DELEコマンド時に指定したメールが格納される(PASSコマンド時に認証が許可されると設定される)
       List<File> delList = null;
       while (line != null) {
-        if (Pop3Util.isUser(line)) {
+        if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
+          Pop3Util.recieveLine(ps, Constants.RECV_OK);
+          socket = startTls();
+          br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+          ps = new PrintStream(socket.getOutputStream());
+        } else if (Pop3Util.isUser(line)) {
           bUser = true;
           user = line.split(" ")[1];
           Pop3Util.recieveLine(ps, Constants.RECV_OK);
@@ -553,5 +568,36 @@ public class Pop3Process implements ServerProcess {
       }
       socket = null;
     }
+  }
+
+  SSLSocket startTls()
+      throws KeyStoreException, NoSuchAlgorithmException, CertificateException,
+          FileNotFoundException, IOException, UnrecoverableKeyException, KeyManagementException {
+    String password = parameter.get("keyStorePass");
+    KeyStore ks = KeyStore.getInstance("JKS");
+    ks.load(new FileInputStream(parameter.get("keyStoreName")), password.toCharArray());
+    KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+    kmf.init(ks, password.toCharArray());
+    SSLContext sslContext = SSLContext.getInstance("TLS");
+    sslContext.init(kmf.getKeyManagers(), null, null);
+
+    SSLSocket sslSocket =
+        (SSLSocket)
+            ((SSLSocketFactory) sslContext.getSocketFactory())
+                .createSocket(
+                    socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
+
+    sslSocket.setUseClientMode(false);
+    sslSocket.startHandshake();
+
+    return sslSocket;
+  }
+
+  boolean hasKeyStore() {
+    return parameter.get("keyStoreName") != null && parameter.get("keyStorePass") != null;
+  }
+
+  boolean isNotSslSocket() {
+    return !(socket instanceof SSLSocket);
   }
 }
