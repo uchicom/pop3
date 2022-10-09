@@ -8,8 +8,8 @@ public class Pop3Util {
   /**
    * コマンドがUSERかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return USERの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUser(String cmd) {
     return cmd.matches(Constants.REG_EXP_USER);
@@ -18,8 +18,8 @@ public class Pop3Util {
   /**
    * コマンドがPASSかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return PASSの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isPass(String cmd) {
     return cmd.matches(Constants.REG_EXP_PASS);
@@ -28,8 +28,8 @@ public class Pop3Util {
   /**
    * コマンドがSTATかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return STATの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isStat(String cmd) {
     return cmd.matches(Constants.REG_EXP_STAT);
@@ -38,8 +38,8 @@ public class Pop3Util {
   /**
    * コマンドがLISTかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return LISTの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isList(String cmd) {
     return cmd.matches(Constants.REG_EXP_LIST);
@@ -48,8 +48,8 @@ public class Pop3Util {
   /**
    * コマンドがLIST 番号かどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return LIST番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isListNum(String cmd) {
     return cmd.matches(Constants.REG_EXP_LIST_NUM);
@@ -58,8 +58,8 @@ public class Pop3Util {
   /**
    * コマンドがRETRかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return RETRの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRetr(String cmd) {
     return cmd.matches(Constants.REG_EXP_RETR);
@@ -68,8 +68,8 @@ public class Pop3Util {
   /**
    * コマンドがRETR 番号かどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return RETR番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRetrNum(String cmd) {
     return cmd.matches(Constants.REG_EXP_RETR_NUM);
@@ -78,28 +78,28 @@ public class Pop3Util {
   /**
    * コマンドがDELE 番号かどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return DELE番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isDeleNum(String cmd) {
     return cmd.matches(Constants.REG_EXP_DELE_NUM);
   }
 
   /**
-   * コマンドがRsetかどうかをチェックする.
+   * コマンドがRSETかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return RSETの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRset(String cmd) {
     return cmd.matches(Constants.REG_EXP_RSET);
   }
 
   /**
-   * コマンドがQuitかどうかをチェックする.
+   * コマンドがQUITかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return QUITの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isQuit(String cmd) {
     return cmd.matches(Constants.REG_EXP_QUIT);
@@ -108,8 +108,8 @@ public class Pop3Util {
   /**
    * コマンドがTOP 番号 番号かどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return TOP番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isTopNumNum(String cmd) {
     return cmd.matches(Constants.REG_EXP_TOP_NUM_NUM);
@@ -118,8 +118,8 @@ public class Pop3Util {
   /**
    * コマンドがUIDLかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return UIDLの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUidl(String cmd) {
     return cmd.matches(Constants.REG_EXP_UIDL);
@@ -128,8 +128,8 @@ public class Pop3Util {
   /**
    * コマンドがUIDL 番号かどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return UIDL番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUidlNum(String cmd) {
     return cmd.matches(Constants.REG_EXP_UIDL_NUM);
@@ -138,8 +138,8 @@ public class Pop3Util {
   /**
    * コマンドがAPOP ユーザー名 ダイジェストかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return APOPの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isApopNameDigest(String cmd) {
     return cmd.matches(Constants.REG_EXP_APOP_NAME_DIGEST);
@@ -148,8 +148,8 @@ public class Pop3Util {
   /**
    * コマンドがNOOPかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return NOOPの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isNoop(String cmd) {
     return cmd.matches(Constants.REG_EXP_NOOP);
@@ -158,8 +158,8 @@ public class Pop3Util {
   /**
    * コマンドがCAPAかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return CAPAの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isCapa(String cmd) {
     return cmd.matches(Constants.REG_EXP_CAPA);
@@ -168,8 +168,8 @@ public class Pop3Util {
   /**
    * コマンドがSTLSかどうかをチェックする.
    *
-   * @param cmd
-   * @return
+   * @param cmd コマンド行
+   * @return STLSの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isStls(String cmd) {
     return cmd.matches(Constants.REG_EXP_STLS);
@@ -178,8 +178,8 @@ public class Pop3Util {
   /**
    * ステータス行を出力する.
    *
-   * @param ps
-   * @param strings
+   * @param ps 出力ストリーム
+   * @param strings 出力文字列配列
    */
   public static void recieveLine(PrintStream ps, String... strings) {
     for (String string : strings) {
