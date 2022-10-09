@@ -545,7 +545,7 @@ public class Pop3Process implements ServerProcess {
   /**
    * 最終処理時刻を取得します.
    *
-   * @return
+   * @return 最終処理時刻
    */
   public long getLastTime() {
     return lastTime;
