@@ -476,7 +476,11 @@ public class Pop3Handler implements Handler {
     strBuff.append(Constants.RECV_LINE_END);
     finished = true;
   }
-  /** NOOP コマンド. */
+  /**
+   * NOOP コマンド.
+   *
+   * @param line コマンド行
+   */
   public void noop(String line) {
     strBuff.append(Constants.RECV_OK_LINE_END);
     // 何もしない
