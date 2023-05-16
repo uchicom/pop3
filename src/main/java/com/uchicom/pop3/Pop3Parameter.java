@@ -8,7 +8,9 @@ import com.uchicom.server.Server;
 import com.uchicom.server.SingleSocketServer;
 import com.uchicom.util.Parameter;
 
-/** @author uchicom: Shigeki Uchiyama */
+/**
+ * @author uchicom: Shigeki Uchiyama
+ */
 public class Pop3Parameter extends Parameter {
 
   public Pop3Parameter(String[] args) {
