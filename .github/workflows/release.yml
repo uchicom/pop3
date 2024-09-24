@@ -59,3 +59,9 @@ jobs:
         asset_path: ./target/${{ steps.project.outputs.name }}-${{ steps.project.outputs.version }}.jar
         asset_name: ${{ steps.project.outputs.name }}-${{ steps.project.outputs.version }}.jar
         asset_content_type: application/java-archive
+    - name: Upload jacoco result
+      uses: actions/upload-artifact@v3
+      with:
+        name: jacoco
+        path: target/site/jacoco
+        retention-days: 30
