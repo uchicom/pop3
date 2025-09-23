@@ -27,15 +27,18 @@ public class Pop3Handler implements Handler {
 
   /** 出力用の文字列バッファ */
   StringBuffer strBuff = new StringBuffer(1024);
+
   /** ダイジェスト用の変数 */
   String timestamp;
 
   // ユーザーコマンドでユーザーが設定されたかどうかのフラグ
   /** ユーザー設定済みフラグ */
   boolean bUser;
+
   // 認証が許可されたかどうかのフラグ
   /** 認証済みフラグ */
   boolean bPass;
+
   /** 終了フラグ */
   boolean finished;
 
@@ -43,15 +46,20 @@ public class Pop3Handler implements Handler {
 
   /** ユーザー名 */
   String user;
+
   /** パスワード */
   String pass;
+
   /** ベースディレクトリ */
   File base;
+
   /** ユーザーメールボックス */
   File userBox;
+
   // メールbox内にあるメールリスト(PASSコマンド時に認証が許可されると設定される)
   /** メールボックス内のリスト */
   List<File> mailList;
+
   // DELEコマンド時に指定したメールが格納される(PASSコマンド時に認証が許可されると設定される)
   /** 削除リスト */
   List<File> delList;
@@ -79,6 +87,7 @@ public class Pop3Handler implements Handler {
     strBuff.append(timestamp);
     strBuff.append(Constants.RECV_LINE_END);
   }
+
   /* (non-Javadoc)
    * @see com.uchicom.dirpop3.Handler#handle(java.nio.channels.SelectionKey)
    */
@@ -165,6 +174,7 @@ public class Pop3Handler implements Handler {
     String line = new String(Arrays.copyOfRange(readBuff.array(), 0, readBuff.position()));
     return line.indexOf("\r\n") >= 0;
   }
+
   /**
    * コマンド行から文字列を取得する. \r\nは除外する.
    *
@@ -290,6 +300,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * LIST コマンド.
    *
@@ -315,6 +326,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * LIST メッセージ番号 コマンド.
    *
@@ -346,6 +358,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * RETR コマンド.
    *
@@ -376,6 +389,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * RETR メッセージ番号コマンド.
    *
@@ -441,6 +455,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * RSET コマンド.
    *
@@ -457,6 +472,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * QUIT コマンド.
    *
@@ -476,6 +492,7 @@ public class Pop3Handler implements Handler {
     strBuff.append(Constants.RECV_LINE_END);
     finished = true;
   }
+
   /**
    * NOOP コマンド.
    *
@@ -485,6 +502,7 @@ public class Pop3Handler implements Handler {
     strBuff.append(Constants.RECV_OK_LINE_END);
     // 何もしない
   }
+
   /**
    * TOP メッセージ番号 行数 コマンド.
    *
@@ -532,6 +550,7 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_NG_LINE_END);
     }
   }
+
   /**
    * UIDL コマンド.
    *
