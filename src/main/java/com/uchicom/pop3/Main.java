@@ -1,6 +1,7 @@
 // (C) 2016 uchicom
 package com.uchicom.pop3;
 
+import com.uchicom.server.Server;
 import java.util.logging.Logger;
 
 /**
@@ -12,6 +13,8 @@ public class Main {
 
   private static final Logger logger = Logger.getLogger(Main.class.getCanonicalName());
 
+  static Server server;
+
   /**
    * アドレスとメールユーザーフォルダの格納フォルダを指定する.
    *
@@ -21,8 +24,14 @@ public class Main {
     logger.info("start");
     Pop3Parameter parameter = new Pop3Parameter(args);
     if (parameter.init()) {
-      parameter.createServer().execute();
+      server = parameter.createServer();
     }
     logger.info("end");
+  }
+
+  public static void shutdown() {
+    if (server != null) {
+      server.stop();
+    }
   }
 }
