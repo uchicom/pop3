@@ -25,6 +25,7 @@ public class Main {
     Pop3Parameter parameter = new Pop3Parameter(args);
     if (parameter.init()) {
       server = parameter.createServer();
+      server.execute();
     }
     logger.info("end");
   }
