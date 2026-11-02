@@ -138,7 +138,8 @@ public class Pop3Process implements ServerProcess {
                 if (passwordFile.exists() && passwordFile.isFile()) {
                   String password;
                   try (BufferedReader passReader =
-                      new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)))) {
+                      new BufferedReader(
+                          new InputStreamReader(new FileInputStream(passwordFile)))) {
                     password = passReader.readLine();
                     while ("".equals(password)) {
                       password = passReader.readLine();
