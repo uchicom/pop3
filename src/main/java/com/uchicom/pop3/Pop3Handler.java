@@ -241,13 +241,14 @@ public class Pop3Handler implements Handler {
         if (!"".equals(pass)) {
           File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
           if (passwordFile.exists() && passwordFile.isFile()) {
-            BufferedReader passReader =
-                new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)));
-            String password = passReader.readLine();
-            while ("".equals(password)) {
+            String password;
+            try (BufferedReader passReader =
+                new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)))) {
               password = passReader.readLine();
+              while ("".equals(password)) {
+                password = passReader.readLine();
+              }
             }
-            passReader.close();
             if (pass.equals(password)) {
               strBuff.append(Constants.RECV_OK_LINE_END);
               bPass = true;
@@ -370,16 +371,16 @@ public class Pop3Handler implements Handler {
       strBuff.append(Constants.RECV_OK_LINE_END);
       for (File child : mailList) {
         if (!delList.contains(child)) {
-          BufferedReader passReader =
-              new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-          String readLine = passReader.readLine();
-          while (readLine != null) {
-            strBuff.append(readLine);
-            strBuff.append(Constants.RECV_LINE_END);
+          try (BufferedReader passReader =
+              new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+            String readLine = passReader.readLine();
+            while (readLine != null) {
+              strBuff.append(readLine);
+              strBuff.append(Constants.RECV_LINE_END);
 
-            readLine = passReader.readLine();
+              readLine = passReader.readLine();
+            }
           }
-          passReader.close();
         }
       }
       strBuff.append(Constants.RECV_DATA);
@@ -407,18 +408,18 @@ public class Pop3Handler implements Handler {
           strBuff.append(' ');
           strBuff.append(child.length());
           strBuff.append(Constants.RECV_LINE_END);
-          BufferedReader passReader =
-              new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-          String readLine = passReader.readLine();
-          while (readLine != null) {
-            strBuff.append(readLine);
-            strBuff.append(Constants.RECV_LINE_END);
+          try (BufferedReader passReader =
+              new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+            String readLine = passReader.readLine();
+            while (readLine != null) {
+              strBuff.append(readLine);
+              strBuff.append(Constants.RECV_LINE_END);
 
-            readLine = passReader.readLine();
+              readLine = passReader.readLine();
+            }
           }
           strBuff.append(Constants.RECV_DATA);
           strBuff.append(Constants.RECV_LINE_END);
-          passReader.close();
         } else {
           strBuff.append(Constants.RECV_NG_LINE_END);
         }
@@ -518,27 +519,27 @@ public class Pop3Handler implements Handler {
         File child = mailList.get(index);
         if (!delList.contains(child)) {
           strBuff.append(Constants.RECV_OK_LINE_END);
-          BufferedReader passReader =
-              new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-          String readLine = passReader.readLine();
-          int maxRow = Integer.parseInt(lines[2]);
-          int row = 0;
-          boolean messageHead = true;
-          while (readLine != null && (messageHead || row <= maxRow)) {
-            strBuff.append(readLine);
-            strBuff.append(Constants.RECV_LINE_END);
+          try (BufferedReader passReader =
+              new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+            String readLine = passReader.readLine();
+            int maxRow = Integer.parseInt(lines[2]);
+            int row = 0;
+            boolean messageHead = true;
+            while (readLine != null && (messageHead || row <= maxRow)) {
+              strBuff.append(readLine);
+              strBuff.append(Constants.RECV_LINE_END);
 
-            readLine = passReader.readLine();
-            if (!messageHead) {
-              row++;
-            }
-            if ("".equals(readLine)) {
-              messageHead = false;
+              readLine = passReader.readLine();
+              if (!messageHead) {
+                row++;
+              }
+              if ("".equals(readLine)) {
+                messageHead = false;
+              }
             }
           }
           strBuff.append(Constants.RECV_DATA);
           strBuff.append(Constants.RECV_LINE_END);
-          passReader.close();
         } else {
           strBuff.append(Constants.RECV_NG_LINE_END);
         }
@@ -672,13 +673,14 @@ public class Pop3Handler implements Handler {
         // パスワードチェック
         File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
         if (passwordFile.exists() && passwordFile.isFile()) {
-          BufferedReader passReader =
-              new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)));
-          String password = passReader.readLine();
-          while ("".equals(password)) {
+          String password;
+          try (BufferedReader passReader =
+              new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)))) {
             password = passReader.readLine();
+            while ("".equals(password)) {
+              password = passReader.readLine();
+            }
           }
-          passReader.close();
           // ダイジェストとタイムスタンプを元にダイジェストを作成
           MessageDigest md = MessageDigest.getInstance("MD5");
           md.update((timestamp + password).getBytes());
