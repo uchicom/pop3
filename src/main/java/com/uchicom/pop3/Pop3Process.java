@@ -94,12 +94,22 @@ public class Pop3Process implements ServerProcess {
           br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
           ps = new PrintStream(socket.getOutputStream());
         } else if (Pop3Util.isUser(line)) {
-          bUser = true;
-          user = line.split(" ")[1];
-          Pop3Util.recieveLine(ps, Constants.RECV_OK);
+          String[] heads = Pop3Util.splitArgs(line);
+          if (heads.length < 2) {
+            // 引数なしエラー
+            Pop3Util.recieveLine(ps, Constants.RECV_NG);
+          } else {
+            bUser = true;
+            user = heads[1];
+            Pop3Util.recieveLine(ps, Constants.RECV_OK);
+          }
         } else if (Pop3Util.isPass(line)) {
-          if (bUser && !bPass) {
-            pass = line.split(" ")[1];
+          String[] passHeads = Pop3Util.splitArgs(line);
+          if (passHeads.length < 2) {
+            // 引数なしエラー
+            Pop3Util.recieveLine(ps, Constants.RECV_NG);
+          } else if (bUser && !bPass) {
+            pass = passHeads[1];
             // ユーザーチェック
             boolean existUser = false;
             for (File box : parameter.getFile("dir").listFiles()) {
@@ -212,18 +222,13 @@ public class Pop3Process implements ServerProcess {
         } else if (Pop3Util.isListNum(line)) {
           if (bPass) {
             // 指定番号のリスト表示
-            String[] heads = line.split(" ");
-            int index = Integer.parseInt(heads[1]) - 1;
+            String[] heads = Pop3Util.splitArgs(line);
+            int index = Pop3Util.parseNumber(heads[1]) - 1;
             if (0 <= index && index < mailList.size()) {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
                 Pop3Util.recieveLine(
-                    ps,
-                    Constants.RECV_OK,
-                    " ",
-                    line.substring(5),
-                    " ",
-                    String.valueOf(child.length()));
+                    ps, Constants.RECV_OK, " ", heads[1], " ", String.valueOf(child.length()));
               } else {
                 Pop3Util.recieveLine(ps, Constants.RECV_NG);
               }
@@ -258,8 +263,8 @@ public class Pop3Process implements ServerProcess {
           }
         } else if (Pop3Util.isRetrNum(line)) {
           if (bPass) {
-            String[] heads = line.split(" ");
-            int index = Integer.parseInt(heads[1]) - 1;
+            String[] heads = Pop3Util.splitArgs(line);
+            int index = Pop3Util.parseNumber(heads[1]) - 1;
             if (0 <= index && index < mailList.size()) {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
@@ -289,8 +294,8 @@ public class Pop3Process implements ServerProcess {
         } else if (Pop3Util.isDeleNum(line)) {
           if (bPass) {
             // 削除処理
-            String[] heads = line.split(" ");
-            int index = Integer.parseInt(heads[1]) - 1;
+            String[] heads = Pop3Util.splitArgs(line);
+            int index = Pop3Util.parseNumber(heads[1]) - 1;
             if (0 <= index && index < mailList.size()) {
               File child = mailList.get(index);
               delList.add(child);
@@ -326,16 +331,16 @@ public class Pop3Process implements ServerProcess {
         } else if (Pop3Util.isTopNumNum(line)) {
           if (bPass) {
             // TRANSACTION 状態でのみ許可される
-            String[] heads = line.split(" ");
-            int index = Integer.parseInt(heads[1]) - 1;
-            if (0 <= index && index < mailList.size()) {
+            String[] heads = Pop3Util.splitArgs(line);
+            int index = Pop3Util.parseNumber(heads[1]) - 1;
+            int maxRow = Pop3Util.parseNumber(heads[2]);
+            if (0 <= index && index < mailList.size() && 0 <= maxRow) {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
                 Pop3Util.recieveLine(ps, Constants.RECV_OK);
                 try (BufferedReader fileReader =
                     new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
                   String readLine = fileReader.readLine();
-                  int maxRow = Integer.parseInt(heads[2]);
                   int row = 0;
                   boolean messageHead = true;
                   while (readLine != null && (messageHead || row <= maxRow)) {
@@ -392,8 +397,8 @@ public class Pop3Process implements ServerProcess {
         } else if (Pop3Util.isUidlNum(line)) {
           if (bPass) {
             // TRANSACTION 状態でのみ許可される
-            String[] heads = line.split(" ");
-            int index = Integer.parseInt(heads[1]) - 1;
+            String[] heads = Pop3Util.splitArgs(line);
+            int index = Pop3Util.parseNumber(heads[1]) - 1;
             if (0 <= index && index < mailList.size()) {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
@@ -426,9 +431,12 @@ public class Pop3Process implements ServerProcess {
           }
           ps.flush();
         } else if (Pop3Util.isApopNameDigest(line)) {
-          if (!bPass) {
-            // 未実装のためエラーとする
-            String[] heads = line.split(" ");
+          String[] apopHeads = Pop3Util.splitArgs(line);
+          if (apopHeads.length < 3) {
+            // 引数不足エラー
+            Pop3Util.recieveLine(ps, Constants.RECV_NG);
+          } else if (!bPass) {
+            String[] heads = apopHeads;
             user = heads[1];
             String digest = heads[2];
             // ユーザーチェック

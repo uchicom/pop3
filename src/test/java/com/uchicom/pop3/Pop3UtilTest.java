@@ -70,6 +70,21 @@ class Pop3UtilTest {
   }
 
   @Test
+  void parseNumber() {
+    assertThat(Pop3Util.parseNumber("12")).isEqualTo(12);
+    assertThat(Pop3Util.parseNumber("0")).isZero();
+    assertThat(Pop3Util.parseNumber("abc")).isEqualTo(-1);
+    assertThat(Pop3Util.parseNumber("99999999999")).isEqualTo(-1);
+    assertThat(Pop3Util.parseNumber("-5")).isEqualTo(-1);
+  }
+
+  @Test
+  void splitArgs_collapsesSpaces() {
+    assertThat(Pop3Util.splitArgs("USER   alice  ")).containsExactly("USER", "alice");
+    assertThat(Pop3Util.splitArgs("USER")).containsExactly("USER");
+  }
+
+  @Test
   void recieveLine_joinsStringsAndAppendsCrLf() {
     var out = new ByteArrayOutputStream();
     var ps = new PrintStream(out, true, StandardCharsets.UTF_8);

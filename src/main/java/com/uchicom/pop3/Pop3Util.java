@@ -176,6 +176,31 @@ public class Pop3Util {
   }
 
   /**
+   * コマンド行を空白区切りで分割する.
+   *
+   * @param cmd コマンド行
+   * @return 空白区切りの配列(連続する空白は1つとして扱う)
+   */
+  public static String[] splitArgs(String cmd) {
+    return cmd.trim().split(" +");
+  }
+
+  /**
+   * コマンド引数の数値を解析する.
+   *
+   * @param value 数値文字列
+   * @return 数値。数値でない、またはintの範囲外の場合は-1を返します
+   */
+  public static int parseNumber(String value) {
+    try {
+      int number = Integer.parseInt(value);
+      return number < 0 ? -1 : number;
+    } catch (NumberFormatException e) {
+      return -1;
+    }
+  }
+
+  /**
    * ステータス行を出力する.
    *
    * @param ps 出力ストリーム

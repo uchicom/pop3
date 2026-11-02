@@ -214,4 +214,36 @@ class Pop3ProcessTest {
 
     assertThat(send("DELE 3")).startsWith("-NG");
   }
+
+  @Test
+  void invalidInput_keepsConnection() throws Exception {
+    login();
+
+    for (var command :
+        new String[] {
+          "USER",
+          "PASS",
+          "RETR abc",
+          "DELE 99999999999",
+          "LIST 99999999999",
+          "RETR 99999999999",
+          "UIDL 99999999999",
+          "TOP 1 x",
+          "TOP 1 99999999999",
+          "TOP 99999999999 1",
+          "APOP alice"
+        }) {
+      assertThat(send(command)).as(command).startsWith("-");
+    }
+    // 接続が継続していること
+    assertThat(send("STAT")).startsWith("+OK");
+  }
+
+  @Test
+  void invalidInput_beforeLogin() throws Exception {
+    assertThat(send("USER")).startsWith("-");
+    assertThat(send("PASS")).startsWith("-");
+    assertThat(send("USER alice")).startsWith("+OK");
+    assertThat(send("PASS secret")).startsWith("+OK");
+  }
 }
