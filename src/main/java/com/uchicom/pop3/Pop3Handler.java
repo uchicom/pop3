@@ -191,8 +191,14 @@ public class Pop3Handler implements Handler {
    * @param line コマンド行
    */
   public void user(String line) {
+    String[] lines = Pop3Util.splitArgs(line);
+    if (lines.length < 2) {
+      // 引数なしエラー
+      strBuff.append(Constants.RECV_NG_LINE_END);
+      return;
+    }
     bUser = true;
-    user = line.split(" ")[1];
+    user = lines[1];
     strBuff.append(Constants.RECV_OK_LINE_END);
   }
 
@@ -203,8 +209,14 @@ public class Pop3Handler implements Handler {
    * @throws IOException パスワードファイル読み取り時に発生
    */
   public void pass(String line) throws IOException {
+    String[] lines = Pop3Util.splitArgs(line);
+    if (lines.length < 2) {
+      // 引数なしエラー
+      strBuff.append(Constants.RECV_NG_LINE_END);
+      return;
+    }
     if (bUser && !bPass) {
-      pass = line.split(" ")[1];
+      pass = lines[1];
       // ユーザーチェック
       boolean existUser = false;
       for (File box : base.listFiles()) {
@@ -336,14 +348,14 @@ public class Pop3Handler implements Handler {
   public void listNum(String line) {
     if (bPass) {
       // 指定番号のリスト表示
-      String[] lines = line.split(" ");
-      int index = Integer.parseInt(lines[1]) - 1;
+      String[] lines = Pop3Util.splitArgs(line);
+      int index = Pop3Util.parseNumber(lines[1]) - 1;
       if (0 <= index && index < mailList.size()) {
         File child = mailList.get(index);
         if (!delList.contains(child)) {
           strBuff.append(Constants.RECV_OK);
           strBuff.append(' ');
-          strBuff.append(line.substring(5));
+          strBuff.append(lines[1]);
           strBuff.append(' ');
           strBuff.append(child.length());
           strBuff.append(Constants.RECV_LINE_END);
@@ -399,8 +411,8 @@ public class Pop3Handler implements Handler {
    */
   public void retrNum(String line) throws IOException {
     if (bPass) {
-      String[] lines = line.split(" ");
-      int index = Integer.parseInt(lines[1]) - 1;
+      String[] lines = Pop3Util.splitArgs(line);
+      int index = Pop3Util.parseNumber(lines[1]) - 1;
       if (0 <= index && index < mailList.size()) {
         File child = mailList.get(index);
         if (!delList.contains(child)) {
@@ -441,8 +453,8 @@ public class Pop3Handler implements Handler {
   public void deleNum(String line) {
     if (bPass) {
       // 削除処理
-      String[] lines = line.split(" ");
-      int index = Integer.parseInt(lines[1]) - 1;
+      String[] lines = Pop3Util.splitArgs(line);
+      int index = Pop3Util.parseNumber(lines[1]) - 1;
       if (0 <= index && index < mailList.size()) {
         File child = mailList.get(index);
         delList.add(child);
@@ -513,16 +525,16 @@ public class Pop3Handler implements Handler {
   public void topNumNum(String line) throws IOException {
     if (bPass) {
       // TRANSACTION 状態でのみ許可される
-      String[] lines = line.split(" ");
-      int index = Integer.parseInt(lines[1]) - 1;
-      if (0 <= index && index < mailList.size()) {
+      String[] lines = Pop3Util.splitArgs(line);
+      int index = Pop3Util.parseNumber(lines[1]) - 1;
+      int maxRow = Pop3Util.parseNumber(lines[2]);
+      if (0 <= index && index < mailList.size() && 0 <= maxRow) {
         File child = mailList.get(index);
         if (!delList.contains(child)) {
           strBuff.append(Constants.RECV_OK_LINE_END);
           try (BufferedReader passReader =
               new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
             String readLine = passReader.readLine();
-            int maxRow = Integer.parseInt(lines[2]);
             int row = 0;
             boolean messageHead = true;
             while (readLine != null && (messageHead || row <= maxRow)) {
@@ -596,8 +608,8 @@ public class Pop3Handler implements Handler {
   public void uidlNum(String line) {
     if (bPass) {
       // TRANSACTION 状態でのみ許可される
-      String[] lines = line.split(" ");
-      int index = Integer.parseInt(lines[1]) - 1;
+      String[] lines = Pop3Util.splitArgs(line);
+      int index = Pop3Util.parseNumber(lines[1]) - 1;
       if (0 <= index && index < mailList.size()) {
         File child = mailList.get(index);
         if (!delList.contains(child)) {
@@ -639,7 +651,12 @@ public class Pop3Handler implements Handler {
    */
   public void apopNameDigest(String line) throws IOException, NoSuchAlgorithmException {
     if (!bPass) {
-      String[] lines = line.split(" ");
+      String[] lines = Pop3Util.splitArgs(line);
+      if (lines.length < 3) {
+        // 引数不足エラー
+        strBuff.append(Constants.RECV_NG_LINE_END);
+        return;
+      }
       user = lines[1];
       String digest = lines[2];
       // ユーザーチェック
