@@ -136,13 +136,15 @@ public class Pop3Process implements ServerProcess {
               if (!"".equals(pass)) {
                 File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
                 if (passwordFile.exists() && passwordFile.isFile()) {
-                  BufferedReader passReader =
-                      new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)));
-                  String password = passReader.readLine();
-                  while ("".equals(password)) {
+                  String password;
+                  try (BufferedReader passReader =
+                      new BufferedReader(
+                          new InputStreamReader(new FileInputStream(passwordFile)))) {
                     password = passReader.readLine();
+                    while ("".equals(password)) {
+                      password = passReader.readLine();
+                    }
                   }
-                  passReader.close();
                   if (pass.equals(password)) {
 
                     Pop3Util.recieveLine(ps, Constants.RECV_OK);
@@ -238,15 +240,15 @@ public class Pop3Process implements ServerProcess {
             Pop3Util.recieveLine(ps, Constants.RECV_OK);
             for (File child : mailList) {
               if (!delList.contains(child)) {
-                BufferedReader fileReader =
-                    new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-                String readLine = fileReader.readLine();
-                while (readLine != null) {
-                  Pop3Util.recieveLine(ps, readLine);
-                  readLine = fileReader.readLine();
-                  lastTime = System.currentTimeMillis();
+                try (BufferedReader fileReader =
+                    new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+                  String readLine = fileReader.readLine();
+                  while (readLine != null) {
+                    Pop3Util.recieveLine(ps, readLine);
+                    readLine = fileReader.readLine();
+                    lastTime = System.currentTimeMillis();
+                  }
                 }
-                fileReader.close();
               }
             }
             Pop3Util.recieveLine(ps, Constants.RECV_DATA);
@@ -262,16 +264,16 @@ public class Pop3Process implements ServerProcess {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
                 Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", String.valueOf(child.length()));
-                BufferedReader fileReader =
-                    new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-                String readLine = fileReader.readLine();
-                while (readLine != null) {
-                  Pop3Util.recieveLine(ps, readLine);
-                  readLine = fileReader.readLine();
-                  lastTime = System.currentTimeMillis();
+                try (BufferedReader fileReader =
+                    new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+                  String readLine = fileReader.readLine();
+                  while (readLine != null) {
+                    Pop3Util.recieveLine(ps, readLine);
+                    readLine = fileReader.readLine();
+                    lastTime = System.currentTimeMillis();
+                  }
+                  Pop3Util.recieveLine(ps, Constants.RECV_DATA);
                 }
-                Pop3Util.recieveLine(ps, Constants.RECV_DATA);
-                fileReader.close();
               } else {
                 Pop3Util.recieveLine(ps, Constants.RECV_NG);
               }
@@ -330,24 +332,24 @@ public class Pop3Process implements ServerProcess {
               File child = mailList.get(index);
               if (!delList.contains(child)) {
                 Pop3Util.recieveLine(ps, Constants.RECV_OK);
-                BufferedReader fileReader =
-                    new BufferedReader(new InputStreamReader(new FileInputStream(child)));
-                String readLine = fileReader.readLine();
-                int maxRow = Integer.parseInt(heads[2]);
-                int row = 0;
-                boolean messageHead = true;
-                while (readLine != null && (messageHead || row <= maxRow)) {
-                  Pop3Util.recieveLine(ps, readLine);
-                  readLine = fileReader.readLine();
-                  if (!messageHead) {
-                    row++;
+                try (BufferedReader fileReader =
+                    new BufferedReader(new InputStreamReader(new FileInputStream(child)))) {
+                  String readLine = fileReader.readLine();
+                  int maxRow = Integer.parseInt(heads[2]);
+                  int row = 0;
+                  boolean messageHead = true;
+                  while (readLine != null && (messageHead || row <= maxRow)) {
+                    Pop3Util.recieveLine(ps, readLine);
+                    readLine = fileReader.readLine();
+                    if (!messageHead) {
+                      row++;
+                    }
+                    if ("".equals(readLine)) {
+                      messageHead = false;
+                    }
                   }
-                  if ("".equals(readLine)) {
-                    messageHead = false;
-                  }
+                  Pop3Util.recieveLine(ps, Constants.RECV_DATA);
                 }
-                Pop3Util.recieveLine(ps, Constants.RECV_DATA);
-                fileReader.close();
               } else {
                 Pop3Util.recieveLine(ps, Constants.RECV_NG);
               }
@@ -460,13 +462,14 @@ public class Pop3Process implements ServerProcess {
               // パスワードチェック
               File passwordFile = new File(userBox, Constants.PASSWORD_FILE_NAME);
               if (passwordFile.exists() && passwordFile.isFile()) {
-                BufferedReader passReader =
-                    new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)));
-                String password = passReader.readLine();
-                while ("".equals(password)) {
+                String password;
+                try (BufferedReader passReader =
+                    new BufferedReader(new InputStreamReader(new FileInputStream(passwordFile)))) {
                   password = passReader.readLine();
+                  while ("".equals(password)) {
+                    password = passReader.readLine();
+                  }
                 }
-                passReader.close();
                 // ダイジェストとタイムスタンプを元にダイジェストを作成
                 MessageDigest md = MessageDigest.getInstance("MD5");
                 md.update((timestamp + password).getBytes());
@@ -579,7 +582,9 @@ public class Pop3Process implements ServerProcess {
           KeyManagementException {
     String password = parameter.get("keyStorePass");
     KeyStore ks = KeyStore.getInstance("JKS");
-    ks.load(new FileInputStream(parameter.get("keyStoreName")), password.toCharArray());
+    try (FileInputStream fis = new FileInputStream(parameter.get("keyStoreName"))) {
+      ks.load(fis, password.toCharArray());
+    }
     KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
     kmf.init(ks, password.toCharArray());
     SSLContext sslContext = SSLContext.getInstance("TLS");
