@@ -35,6 +35,7 @@ class Pop3ProcessTest {
   ServerSocket serverSocket;
   BufferedReader in;
   PrintStream out;
+  String greeting;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -51,8 +52,13 @@ class Pop3ProcessTest {
 
     var parameter = new Pop3Parameter(new String[0]);
     parameter.put("dir", base.getAbsolutePath());
-    parameter.put("hostName", "localhost");
+    // コマンドライン起動時と同じく init() 経由でデフォルト値(host など)を設定する
+    parameter.init();
+    greeting = startServer(parameter);
+  }
 
+  /** サーバを起動し、接続時の挨拶行を返す. */
+  String startServer(Pop3Parameter parameter) throws Exception {
     serverSocket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
     client = new Socket(InetAddress.getLoopbackAddress(), serverSocket.getLocalPort());
     var accepted = serverSocket.accept();
@@ -62,7 +68,9 @@ class Pop3ProcessTest {
     client.setSoTimeout(5000);
     in = new BufferedReader(new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
     out = new PrintStream(client.getOutputStream(), true, StandardCharsets.UTF_8);
-    assertThat(in.readLine()).startsWith("+OK");
+    var line = in.readLine();
+    assertThat(line).startsWith("+OK");
+    return line;
   }
 
   @AfterEach
@@ -92,6 +100,11 @@ class Pop3ProcessTest {
   void login() throws IOException {
     assertThat(send("USER alice")).startsWith("+OK");
     assertThat(send("PASS secret")).startsWith("+OK");
+  }
+
+  @Test
+  void greeting_containsHostFromInit() {
+    assertThat(greeting).matches("\\+OK <\\d+\\.\\d+@localhost>.*");
   }
 
   @Test
