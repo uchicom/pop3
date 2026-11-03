@@ -65,7 +65,7 @@ public class Pop3Process implements ServerProcess {
             + "."
             + System.currentTimeMillis()
             + "@"
-            + parameter.get("hostName")
+            + parameter.get("host")
             + ">";
     BufferedReader br = null;
     PrintStream ps = null;
