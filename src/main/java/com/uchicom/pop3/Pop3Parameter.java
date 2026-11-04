@@ -28,7 +28,7 @@ public class Pop3Parameter extends Parameter {
     }
     // 実行するサーバのタイプ
     if (!is("type")) {
-      put("type", "single");
+      put("type", "pool");
     }
     // ホスト名
     if (!is("host")) {
@@ -45,6 +45,14 @@ public class Pop3Parameter extends Parameter {
     // プールするスレッド数
     if (!is("pool")) {
       put("pool", Constants.DEFAULT_POOL);
+    }
+    // 読み取りタイムアウト(ミリ秒)。0 以下は無制限
+    if (!is("timeout")) {
+      put("timeout", Constants.DEFAULT_TIMEOUT);
+    }
+    // 1行の最大長(行終端を除く文字数)
+    if (!is("maxLine")) {
+      put("maxLine", Constants.DEFAULT_MAX_LINE);
     }
 
     return true;

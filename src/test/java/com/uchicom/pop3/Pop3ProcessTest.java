@@ -292,6 +292,58 @@ class Pop3ProcessTest {
     assertThat(thrown.get()).isNull();
   }
 
+  @Test
+  void readLine_stripsCrLfAndLf() throws Exception {
+    var reader = new BufferedReader(new java.io.StringReader("abc\r\ndef\nlast"));
+
+    assertThat(Pop3Process.readLine(reader, 10)).isEqualTo("abc");
+    assertThat(Pop3Process.readLine(reader, 10)).isEqualTo("def");
+    assertThat(Pop3Process.readLine(reader, 10)).isEqualTo("last");
+    assertThat(Pop3Process.readLine(reader, 10)).isNull();
+  }
+
+  @Test
+  void readLine_limit() throws Exception {
+    // 上限ちょうどは許可(CRLF 付きでも)、超過は例外
+    var ok = new BufferedReader(new java.io.StringReader("12345\r\n"));
+    assertThat(Pop3Process.readLine(ok, 5)).isEqualTo("12345");
+
+    var ng = new BufferedReader(new java.io.StringReader("123456\r\n"));
+    org.junit.jupiter.api.Assertions.assertThrows(
+        Pop3Process.LineTooLongException.class, () -> Pop3Process.readLine(ng, 5));
+  }
+
+  @Test
+  void longLineWithoutNewline_disconnects() throws Exception {
+    tearDown();
+    var parameter = new Pop3Parameter(new String[] {"-maxLine", "100"});
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.init();
+    startServer(parameter);
+
+    // 改行を送らずに上限を超える入力
+    out.print("A".repeat(200));
+    out.flush();
+
+    assertThat(in.readLine()).isNull();
+    serverThread.join(5000);
+    assertThat(serverThread.isAlive()).isFalse();
+  }
+
+  @Test
+  void idleConnection_timesOut() throws Exception {
+    tearDown();
+    var parameter = new Pop3Parameter(new String[] {"-timeout", "300"});
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.init();
+    startServer(parameter);
+
+    // 何も送らなければサーバ側から切断される
+    assertThat(in.readLine()).isNull();
+    serverThread.join(5000);
+    assertThat(serverThread.isAlive()).isFalse();
+  }
+
   /** 自己署名のJKSを生成し、TLS有効なサーバを起動する. */
   void startTlsServer() throws Exception {
     tearDown();

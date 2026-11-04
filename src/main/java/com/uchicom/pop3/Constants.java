@@ -117,4 +117,10 @@ public class Constants {
 
   /** デフォルトスレッドプール数 */
   public static String DEFAULT_POOL = "10";
+
+  /** デフォルト読み取りタイムアウト(ミリ秒) */
+  public static String DEFAULT_TIMEOUT = "60000";
+
+  /** デフォルト1行の最大長(RFC 1939 は 255 オクテット以上を推奨) */
+  public static String DEFAULT_MAX_LINE = "1024";
 }
