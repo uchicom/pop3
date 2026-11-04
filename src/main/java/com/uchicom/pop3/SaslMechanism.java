@@ -11,6 +11,15 @@ package com.uchicom.pop3;
 public interface SaslMechanism {
 
   /**
+   * 初期応答なしで開始された場合に最初に送るチャレンジ.
+   *
+   * @return チャレンジ(デコード済み)。既定は空
+   */
+  default byte[] initialChallenge() {
+    return new byte[0];
+  }
+
+  /**
    * クライアントの応答を処理する.
    *
    * @param response クライアントの応答(デコード済み)

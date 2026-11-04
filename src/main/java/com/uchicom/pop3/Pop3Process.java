@@ -4,8 +4,6 @@ package com.uchicom.pop3;
 import com.uchicom.server.ServerProcess;
 import com.uchicom.util.Parameter;
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -13,18 +11,13 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 
 public class Pop3Process implements ServerProcess {
 
@@ -65,6 +58,11 @@ public class Pop3Process implements ServerProcess {
     Pop3Session session = null;
     try {
       socket.setSoTimeout(readTimeout());
+      if (isImplicitTls() && hasKeyStore()) {
+        // 暗黙的TLS:挨拶の前にハンドシェイクする
+        socket = startTls();
+        socket.setSoTimeout(readTimeout());
+      }
       br = newReader(socket);
       ps = newPrintStream(socket);
       // 1接続に対する受付開始
@@ -90,6 +88,7 @@ public class Pop3Process implements ServerProcess {
           }
         } else {
           session.setStlsAvailable(hasKeyStore() && isNotSslSocket());
+          session.setTlsActive(!isNotSslSocket());
           session.execute(line, ps);
           ps.flush();
           if (session.isFinished()) {
@@ -104,8 +103,6 @@ public class Pop3Process implements ServerProcess {
     } catch (LineTooLongException e) {
       logger.warning("line too long: " + e.getMessage());
     } catch (IOException e) {
-      e.printStackTrace();
-    } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
     } catch (Throwable e) {
       e.printStackTrace();
@@ -262,38 +259,59 @@ public class Pop3Process implements ServerProcess {
     }
   }
 
-  SSLSocket startTls()
-      throws KeyStoreException,
-          NoSuchAlgorithmException,
-          CertificateException,
-          FileNotFoundException,
-          IOException,
-          UnrecoverableKeyException,
-          KeyManagementException {
-    String password = parameter.get("keyStorePass");
-    KeyStore ks = KeyStore.getInstance("JKS");
-    try (FileInputStream fis = new FileInputStream(parameter.get("keyStoreName"))) {
-      ks.load(fis, password.toCharArray());
-    }
-    KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-    kmf.init(ks, password.toCharArray());
-    SSLContext sslContext = SSLContext.getInstance("TLS");
-    sslContext.init(kmf.getKeyManagers(), null, null);
-
+  /** 共有の SSLContext でソケットを TLS サーバーモードに切り替え、ハンドシェイクを行う. */
+  SSLSocket startTls() throws IOException {
     SSLSocket sslSocket =
         (SSLSocket)
-            ((SSLSocketFactory) sslContext.getSocketFactory())
+            sslContext()
+                .getSocketFactory()
                 .createSocket(
                     socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
 
     sslSocket.setUseClientMode(false);
+    sslSocket.setEnabledProtocols(enabledProtocols(sslSocket));
+    String cipherSuites = parameter.get("cipherSuites");
+    if (cipherSuites != null) {
+      sslSocket.setEnabledCipherSuites(cipherSuites.split(" *, *"));
+    }
     sslSocket.startHandshake();
 
     return sslSocket;
   }
 
+  /** 指定プロトコルのうち、実行環境が対応するものを返す. 1つも対応しない場合は例外. */
+  private String[] enabledProtocols(SSLSocket sslSocket) throws IOException {
+    String value = parameter.get("tlsProtocols");
+    List<String> supported = Arrays.asList(sslSocket.getSupportedProtocols());
+    List<String> enabled = new ArrayList<>();
+    for (String protocol :
+        (value != null ? value : Constants.DEFAULT_TLS_PROTOCOLS).split(" *, *")) {
+      if (supported.contains(protocol)) {
+        enabled.add(protocol);
+      }
+    }
+    if (enabled.isEmpty()) {
+      throw new IOException("no supported tls protocol: " + value);
+    }
+    return enabled.toArray(new String[0]);
+  }
+
+  private SSLContext sslContext() throws IOException {
+    SSLContext sslContext =
+        parameter instanceof Pop3Parameter ? ((Pop3Parameter) parameter).getSslContext() : null;
+    if (sslContext == null) {
+      throw new IOException("ssl context is not initialized");
+    }
+    return sslContext;
+  }
+
   boolean hasKeyStore() {
     return parameter.get("keyStoreName") != null && parameter.get("keyStorePass") != null;
+  }
+
+  /** 暗黙的TLS(接続直後からTLS)で待ち受けるかどうか. */
+  boolean isImplicitTls() {
+    return "true".equalsIgnoreCase(parameter.get("implicitTls"));
   }
 
   boolean isNotSslSocket() {

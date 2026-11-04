@@ -127,6 +127,12 @@ public class Constants {
   /** デフォルト1行の最大長(RFC 1939 は 255 オクテット以上を推奨) */
   public static String DEFAULT_MAX_LINE = "1024";
 
+  /** デフォルトキーストア種別 */
+  public static String DEFAULT_KEY_STORE_TYPE = "JKS";
+
+  /** デフォルト有効プロトコル(カンマ区切り。TLS 1.2 以上) */
+  public static String DEFAULT_TLS_PROTOCOLS = "TLSv1.3,TLSv1.2";
+
   /** デフォルト認証失敗の上限回数(超過で切断) */
   public static String DEFAULT_MAX_AUTH_FAILURES = "3";
 
