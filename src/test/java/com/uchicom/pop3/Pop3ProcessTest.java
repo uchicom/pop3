@@ -130,31 +130,31 @@ class Pop3ProcessTest {
   @Test
   void login_wrongPassword() throws Exception {
     assertThat(send("USER alice")).startsWith("+OK");
-    assertThat(send("PASS wrong")).startsWith("-NG");
+    assertThat(send("PASS wrong")).startsWith("-ERR");
   }
 
   @Test
   void login_unknownUser() throws Exception {
     assertThat(send("USER bob")).startsWith("+OK");
-    assertThat(send("PASS secret")).startsWith("-NG");
+    assertThat(send("PASS secret")).startsWith("-ERR");
   }
 
   @Test
   void pass_withoutUser() throws Exception {
-    assertThat(send("PASS secret")).startsWith("-NG");
+    assertThat(send("PASS secret")).startsWith("-ERR");
   }
 
   @Test
   void commands_requireAuthentication() throws Exception {
     for (var command :
         new String[] {"STAT", "LIST", "LIST 1", "RETR 1", "DELE 1", "RSET", "TOP 1 0", "UIDL"}) {
-      assertThat(send(command)).as(command).startsWith("-NG");
+      assertThat(send(command)).as(command).startsWith("-ERR");
     }
   }
 
   @Test
   void unknownCommand() throws Exception {
-    assertThat(send("FOO")).isEqualTo(Constants.RECV_NG_CMD_NOT_FOUND);
+    assertThat(send("FOO")).isEqualTo(Constants.RECV_ERR_CMD_NOT_FOUND);
   }
 
   @Test
@@ -178,7 +178,7 @@ class Pop3ProcessTest {
     login();
 
     assertThat(send("LIST 2")).isEqualTo("+OK 2 " + octets(mail2));
-    assertThat(send("LIST 3")).startsWith("-NG");
+    assertThat(send("LIST 3")).startsWith("-ERR");
   }
 
   @Test
@@ -187,7 +187,7 @@ class Pop3ProcessTest {
 
     assertThat(send("RETR 1")).isEqualTo("+OK " + octets(mail1));
     assertThat(readMultiLine()).containsExactly("Subject: first", "", "body1", "body1-2");
-    assertThat(send("RETR 9")).startsWith("-NG");
+    assertThat(send("RETR 9")).startsWith("-ERR");
   }
 
   @Test
@@ -206,7 +206,7 @@ class Pop3ProcessTest {
     assertThat(readMultiLine())
         .containsExactly("1 " + Pop3SessionTest.uid("mail1"), "2 " + Pop3SessionTest.uid("mail2"));
     assertThat(send("UIDL 2")).isEqualTo("+OK 2 " + Pop3SessionTest.uid("mail2"));
-    assertThat(send("UIDL 3")).startsWith("-NG");
+    assertThat(send("UIDL 3")).startsWith("-ERR");
   }
 
   @Test
@@ -215,7 +215,7 @@ class Pop3ProcessTest {
 
     assertThat(send("DELE 1")).startsWith("+OK");
     assertThat(send("STAT")).isEqualTo("+OK 1 " + octets(mail2));
-    assertThat(send("RETR 1")).startsWith("-NG");
+    assertThat(send("RETR 1")).startsWith("-ERR");
     assertThat(send("QUIT")).startsWith("+OK");
     serverThread.join(5000);
 
@@ -241,7 +241,7 @@ class Pop3ProcessTest {
   void dele_outOfRange() throws Exception {
     login();
 
-    assertThat(send("DELE 3")).startsWith("-NG");
+    assertThat(send("DELE 3")).startsWith("-ERR");
   }
 
   @Test
@@ -443,13 +443,13 @@ class Pop3ProcessTest {
     assertThat(send("PASS secret")).startsWith("-ERR [AUTH]");
     assertThat(send("APOP alice 0123456789abcdef0123456789abcdef")).startsWith("-ERR [AUTH]");
     assertThat(send("AUTH SCRAM-SHA-256")).startsWith("-ERR [AUTH]");
-    assertThat(send("STAT")).startsWith("-NG");
+    assertThat(send("STAT")).startsWith("-ERR");
 
     assertThat(send("STLS")).startsWith("+OK");
     upgradeClient();
 
     // TLS確立後は認証できる
-    assertThat(send("PASS secret")).startsWith("-NG");
+    assertThat(send("PASS secret")).startsWith("-ERR");
     login();
   }
 }

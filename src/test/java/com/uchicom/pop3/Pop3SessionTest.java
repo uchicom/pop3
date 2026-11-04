@@ -59,9 +59,9 @@ class Pop3SessionTest {
 
   @Test
   void login_failures() throws Exception {
-    assertThat(run("PASS secret")).isEqualTo("-NG\r\n");
-    assertThat(run("USER bob", "PASS secret")).isEqualTo("+OK\r\n-NG\r\n");
-    assertThat(run("USER alice", "PASS wrong")).isEqualTo("+OK\r\n-NG\r\n");
+    assertThat(run("PASS secret")).isEqualTo("-ERR\r\n");
+    assertThat(run("USER bob", "PASS secret")).isEqualTo("+OK\r\n-ERR\r\n");
+    assertThat(run("USER alice", "PASS wrong")).isEqualTo("+OK\r\n-ERR\r\n");
     assertThat(session.isAuthenticated()).isFalse();
   }
 
@@ -69,7 +69,7 @@ class Pop3SessionTest {
   void login_withoutPasswordFile() throws Exception {
     assertThat(new File(base, "bob").mkdir()).isTrue();
 
-    assertThat(run("USER bob", "PASS secret")).isEqualTo("+OK\r\n-NG\r\n");
+    assertThat(run("USER bob", "PASS secret")).isEqualTo("+OK\r\n-ERR\r\n");
   }
 
   @Test
@@ -83,7 +83,7 @@ class Pop3SessionTest {
     assertThat(run("APOP alice " + digest)).isEqualTo("+OK\r\n");
     assertThat(session.isAuthenticated()).isTrue();
     // 認証後の再認証はエラー
-    assertThat(run("APOP alice " + digest)).isEqualTo("-NG\r\n");
+    assertThat(run("APOP alice " + digest)).isEqualTo("-ERR\r\n");
   }
 
   @Test
@@ -117,7 +117,7 @@ class Pop3SessionTest {
 
   @Test
   void apop_failure() throws Exception {
-    assertThat(run("APOP alice 00", "APOP bob 00")).isEqualTo("-NG\r\n-NG\r\n");
+    assertThat(run("APOP alice 00", "APOP bob 00")).isEqualTo("-ERR\r\n-ERR\r\n");
     assertThat(session.isAuthenticated()).isFalse();
   }
 
@@ -125,9 +125,9 @@ class Pop3SessionTest {
   void commands_requireAuthentication() throws Exception {
     for (var command :
         new String[] {"STAT", "LIST", "LIST 1", "RETR", "RETR 1", "DELE 1", "RSET", "TOP 1 0"}) {
-      assertThat(run(command)).as(command).isEqualTo("-NG\r\n");
+      assertThat(run(command)).as(command).isEqualTo("-ERR\r\n");
     }
-    assertThat(run("UIDL", "UIDL 1")).isEqualTo("-NG\r\n-NG\r\n");
+    assertThat(run("UIDL", "UIDL 1")).isEqualTo("-ERR\r\n-ERR\r\n");
   }
 
   @Test
@@ -144,7 +144,7 @@ class Pop3SessionTest {
     assertThat(run("LIST"))
         .isEqualTo("+OK\r\n1 " + octets(mail1) + "\r\n2 " + octets(mail2) + "\r\n.\r\n");
     assertThat(run("LIST 2")).isEqualTo("+OK 2 " + octets(mail2) + "\r\n");
-    assertThat(run("LIST 3")).isEqualTo("-NG\r\n");
+    assertThat(run("LIST 3")).isEqualTo("-ERR\r\n");
   }
 
   @Test
@@ -153,7 +153,7 @@ class Pop3SessionTest {
 
     assertThat(run("RETR 1"))
         .isEqualTo("+OK " + octets(mail1) + "\r\nSubject: first\r\n\r\nbody1\r\nbody1-2\r\n.\r\n");
-    assertThat(run("RETR 9")).isEqualTo("-NG\r\n");
+    assertThat(run("RETR 9")).isEqualTo("-ERR\r\n");
     assertThat(run("RETR"))
         .isEqualTo(
             "+OK\r\nSubject: first\r\n\r\nbody1\r\nbody1-2\r\nSubject: second\r\n\r\nbody2\r\n.\r\n");
@@ -174,7 +174,7 @@ class Pop3SessionTest {
     assertThat(run("UIDL"))
         .isEqualTo("+OK\r\n1 " + uid("mail1") + "\r\n2 " + uid("mail2") + "\r\n.\r\n");
     assertThat(run("UIDL 2")).isEqualTo("+OK 2 " + uid("mail2") + "\r\n");
-    assertThat(run("UIDL 3")).isEqualTo("-NG\r\n");
+    assertThat(run("UIDL 3")).isEqualTo("-ERR\r\n");
   }
 
   @Test
@@ -214,12 +214,12 @@ class Pop3SessionTest {
 
     assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
     assertThat(run("STAT")).isEqualTo("+OK 1 " + octets(mail2) + "\r\n");
-    assertThat(run("RETR 1", "LIST 1", "UIDL 1")).isEqualTo("-NG\r\n-NG\r\n-NG\r\n");
+    assertThat(run("RETR 1", "LIST 1", "UIDL 1")).isEqualTo("-ERR\r\n-ERR\r\n-ERR\r\n");
     assertThat(run("RSET")).isEqualTo("+OK\r\n");
     assertThat(run("STAT")).isEqualTo("+OK 2 " + (octets(mail1) + octets(mail2)) + "\r\n");
 
     assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
-    assertThat(run("DELE 3")).isEqualTo("-NG\r\n");
+    assertThat(run("DELE 3")).isEqualTo("-ERR\r\n");
     assertThat(session.isFinished()).isFalse();
     assertThat(run("QUIT")).isEqualTo("+OK\r\n");
     assertThat(session.isFinished()).isTrue();
@@ -232,7 +232,7 @@ class Pop3SessionTest {
     login();
 
     assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
-    assertThat(run("DELE 1")).isEqualTo("-NG\r\n");
+    assertThat(run("DELE 1")).isEqualTo("-ERR\r\n");
     assertThat(run("STAT")).isEqualTo("+OK 1 " + octets(mail2) + "\r\n");
   }
 
@@ -243,7 +243,7 @@ class Pop3SessionTest {
     // 他の要因で先に消えていて削除できない状況
     assertThat(mail1.delete()).isTrue();
 
-    assertThat(run("QUIT")).isEqualTo("-NG\r\n");
+    assertThat(run("QUIT")).isEqualTo("-ERR\r\n");
     assertThat(session.isFinished()).isTrue();
   }
 
@@ -327,7 +327,7 @@ class Pop3SessionTest {
           "TOP 1 99999999999",
           "TOP 99999999999 1"
         }) {
-      assertThat(run(command)).as(command).isEqualTo("-NG\r\n");
+      assertThat(run(command)).as(command).isEqualTo("-ERR\r\n");
       count++;
     }
     assertThat(count).isEqualTo(6);
@@ -336,7 +336,7 @@ class Pop3SessionTest {
   @Test
   void missingArgument_isRejected() throws Exception {
     assertThat(run("USER", "PASS", "APOP alice"))
-        .isEqualTo(Constants.RECV_NG_CMD_NOT_FOUND.concat("\r\n").repeat(3));
+        .isEqualTo(Constants.RECV_ERR_CMD_NOT_FOUND.concat("\r\n").repeat(3));
     assertThat(session.isAuthenticated()).isFalse();
   }
 
@@ -344,7 +344,7 @@ class Pop3SessionTest {
   void noop_emptyLine_unknownCommand() throws Exception {
     assertThat(run("NOOP")).isEqualTo("+OK\r\n");
     assertThat(run("")).isEmpty();
-    assertThat(run("FOO")).isEqualTo(Constants.RECV_NG_CMD_NOT_FOUND + "\r\n");
+    assertThat(run("FOO")).isEqualTo(Constants.RECV_ERR_CMD_NOT_FOUND + "\r\n");
   }
 
   /** 送信されるオクテット数(改行はCRLF換算). */
@@ -405,9 +405,9 @@ class Pop3SessionTest {
   void authFailures_disconnectAtLimit() throws Exception {
     session.setMaxAuthFailures(2);
 
-    assertThat(run("USER alice", "PASS wrong")).isEqualTo("+OK\r\n-NG\r\n");
+    assertThat(run("USER alice", "PASS wrong")).isEqualTo("+OK\r\n-ERR\r\n");
     assertThat(session.isFinished()).isFalse();
-    assertThat(run("PASS wrong")).isEqualTo("-NG\r\n");
+    assertThat(run("PASS wrong")).isEqualTo("-ERR\r\n");
     assertThat(session.isFinished()).isTrue();
   }
 

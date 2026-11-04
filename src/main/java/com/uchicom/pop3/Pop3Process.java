@@ -76,7 +76,7 @@ public class Pop3Process implements ServerProcess {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
           if (session.isAuthenticated()) {
             // 認証済みの状態でのSTLSは拒否する
-            Pop3Util.recieveLine(ps, Constants.RECV_NG);
+            Pop3Util.recieveLine(ps, Constants.RECV_ERR);
           } else {
             Pop3Util.recieveLine(ps, Constants.RECV_OK);
             socket = startTls();

@@ -228,13 +228,16 @@ public class Pop3Session {
     } else if (line.isEmpty()) {
       // 何もしない
     } else {
-      writeLine(out, Constants.RECV_NG_CMD_NOT_FOUND);
+      writeLine(out, Constants.RECV_ERR_CMD_NOT_FOUND);
     }
   }
 
   void capa(Appendable out) throws IOException {
     writeLine(out, Constants.RECV_OK, " Capability list follows");
     writeLine(out, "TOP");
+    writeLine(out, "RESP-CODES");
+    writeLine(out, "PIPELINING");
+    writeLine(out, "IMPLEMENTATION uchicom-pop3");
     if (!stlsAvailable) {
       // TLS確立前は認証を受け付けないため、USERとSASLを通知しない
       writeLine(out, "USER");
@@ -256,7 +259,7 @@ public class Pop3Session {
   void auth(String line, Appendable out) throws IOException {
     String[] args = Pop3Util.splitArgs(line);
     if (bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     if (args.length == 1) {
@@ -270,7 +273,7 @@ public class Pop3Session {
     }
     ScramAlgorithm algorithm = ScramAlgorithm.find(args[1]);
     if (algorithm == null) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     sasl = new ScramMechanism(algorithm, this::findScramCredential);
@@ -334,7 +337,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     if (args.length < 2) {
       // 引数なしエラー
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     bUser = true;
@@ -346,7 +349,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     if (args.length < 2 || !bUser || bPass) {
       // 引数なし、ユーザー名未入力、認証済みエラー
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     String pass = args[1];
@@ -368,7 +371,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     if (args.length < 3 || bPass) {
       // 引数不足、パスワード認証後に再度認証はエラー
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     user = args[1];
@@ -393,13 +396,13 @@ public class Pop3Session {
       }
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
-      writeLine(out, Constants.RECV_NG_CMD_NOT_FOUND);
+      writeLine(out, Constants.RECV_ERR_CMD_NOT_FOUND);
     }
   }
 
   void stat(Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     long fileLength = 0;
@@ -416,7 +419,7 @@ public class Pop3Session {
 
   void list(Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK);
@@ -433,7 +436,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     int index = findMail(args[1]);
     if (index < 0) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK, " ", args[1], " ", String.valueOf(sizeList.get(index)));
@@ -441,7 +444,7 @@ public class Pop3Session {
 
   void retr(Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK);
@@ -457,7 +460,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     int index = findMail(args[1]);
     if (index < 0) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK, " ", String.valueOf(sizeList.get(index)));
@@ -467,7 +470,7 @@ public class Pop3Session {
 
   void deleNum(String line, Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     int index = Pop3Util.parseNumber(Pop3Util.splitArgs(line)[1]) - 1;
@@ -476,13 +479,13 @@ public class Pop3Session {
       writeLine(out, Constants.RECV_OK);
     } else {
       // index範囲外、または削除済み
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
     }
   }
 
   void rset(Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     // 消去マークを無くす
@@ -500,7 +503,7 @@ public class Pop3Session {
         }
       }
     }
-    writeLine(out, deleted ? Constants.RECV_OK : Constants.RECV_NG);
+    writeLine(out, deleted ? Constants.RECV_OK : Constants.RECV_ERR);
     finished = true;
     close();
   }
@@ -510,7 +513,7 @@ public class Pop3Session {
     int index = findMail(args[1]);
     int maxRow = Pop3Util.parseNumber(args[2]);
     if (index < 0 || maxRow < 0) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK);
@@ -534,7 +537,7 @@ public class Pop3Session {
 
   void uidl(Appendable out) throws IOException {
     if (!bPass) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK);
@@ -551,7 +554,7 @@ public class Pop3Session {
     String[] args = Pop3Util.splitArgs(line);
     int index = findMail(args[1]);
     if (index < 0) {
-      writeLine(out, Constants.RECV_NG);
+      writeLine(out, Constants.RECV_ERR);
       return;
     }
     writeLine(out, Constants.RECV_OK, " ", args[1], " ", toUid(mailList.get(index)));
@@ -617,7 +620,7 @@ public class Pop3Session {
     logger.warning(auditMessage("failure", method, name));
     authFailures++;
     delay();
-    writeLine(out, Constants.RECV_NG);
+    writeLine(out, Constants.RECV_ERR);
     if (authFailures >= maxAuthFailures) {
       logger.warning(auditMessage("too many failures", method, name));
       finished = true;

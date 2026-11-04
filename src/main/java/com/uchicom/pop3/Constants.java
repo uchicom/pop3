@@ -21,14 +21,11 @@ public class Constants {
   /** 返却メッセージ(+OK(行終端文字列あり)) */
   public static String RECV_OK_LINE_END = "+OK" + RECV_LINE_END;
 
-  /** 返却メッセージ(-NG) */
-  public static String RECV_NG = "-NG";
+  /** 返却メッセージ(-ERR) */
+  public static String RECV_ERR = "-ERR";
 
-  /** 返却メッセージ(-NG(行終端文字列あり)) */
-  public static String RECV_NG_LINE_END = "-NG" + RECV_LINE_END;
-
-  /** 返却メッセージ(-NG(コマンド未対応)) */
-  public static String RECV_NG_CMD_NOT_FOUND = "-NG Command not support";
+  /** 返却メッセージ(-ERR(コマンド未対応)) */
+  public static String RECV_ERR_CMD_NOT_FOUND = "-ERR Command not support";
 
   /** 返却メッセージ(TLS確立前の認証拒否:RFC 3206 の [AUTH] 応答コード) */
   public static String RECV_ERR_AUTH_TLS_REQUIRED =
