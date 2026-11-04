@@ -69,10 +69,17 @@ public class Pop3Process implements ServerProcess {
       Pop3Session session = new Pop3Session(parameter.getFile("dir"), timestamp);
       while (line != null) {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
-          Pop3Util.recieveLine(ps, Constants.RECV_OK);
-          socket = startTls();
-          br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-          ps = new PrintStream(socket.getOutputStream());
+          if (session.isAuthenticated()) {
+            // 認証済みの状態でのSTLSは拒否する
+            Pop3Util.recieveLine(ps, Constants.RECV_NG);
+          } else {
+            Pop3Util.recieveLine(ps, Constants.RECV_OK);
+            socket = startTls();
+            br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            ps = new PrintStream(socket.getOutputStream());
+            // RFC 2595 4: TLS前に得た情報(USERなど)は破棄する
+            session = new Pop3Session(parameter.getFile("dir"), timestamp);
+          }
         } else {
           session.setStlsAvailable(hasKeyStore() && isNotSslSocket());
           session.execute(line, ps);
