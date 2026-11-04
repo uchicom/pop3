@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * POP3のコマンド処理を行うクラス.
@@ -29,6 +30,8 @@ import java.util.List;
  * @author uchicom: Shigeki Uchiyama
  */
 public class Pop3Session {
+
+  private static final Logger logger = Logger.getLogger(Pop3Session.class.getCanonicalName());
 
   /** SCRAMの反復回数 */
   private static final int SCRAM_ITERATIONS = 4096;
@@ -76,6 +79,18 @@ public class Pop3Session {
   /** メールボックスの排他ロック(認証成功中のみ保持) */
   private FileLock mailboxLock;
 
+  /** 認証失敗の上限回数(超過で切断) */
+  private int maxAuthFailures = Integer.parseInt(Constants.DEFAULT_MAX_AUTH_FAILURES);
+
+  /** 認証失敗時の応答遅延(ミリ秒) */
+  private long authFailureDelay;
+
+  /** 認証失敗回数 */
+  private int authFailures;
+
+  /** 監査ログに出力する接続元 */
+  private String remoteAddress = "unknown";
+
   /**
    * コンストラクタ.
    *
@@ -85,6 +100,33 @@ public class Pop3Session {
   public Pop3Session(File base, String timestamp) {
     this.base = base;
     this.timestamp = timestamp;
+  }
+
+  /**
+   * 認証失敗の上限回数を設定する. 上限に達した接続は切断対象(終了扱い)となる.
+   *
+   * @param maxAuthFailures 上限回数
+   */
+  public void setMaxAuthFailures(int maxAuthFailures) {
+    this.maxAuthFailures = maxAuthFailures;
+  }
+
+  /**
+   * 認証失敗時の応答遅延を設定する.
+   *
+   * @param authFailureDelay 遅延(ミリ秒)。0以下は遅延なし
+   */
+  public void setAuthFailureDelay(long authFailureDelay) {
+    this.authFailureDelay = authFailureDelay;
+  }
+
+  /**
+   * 監査ログに出力する接続元を設定する.
+   *
+   * @param remoteAddress 接続元
+   */
+  public void setRemoteAddress(String remoteAddress) {
+    this.remoteAddress = remoteAddress;
   }
 
   /**
@@ -258,16 +300,16 @@ public class Pop3Session {
       user = mechanism.getUser();
       File userBox = findUserBox(user);
       if (userBox == null) {
-        writeLine(out, Constants.RECV_NG);
+        authFailed("AUTH", user, out);
         return;
       }
-      loginResponse(userBox, out);
+      loginResponse("AUTH", userBox, out);
     } catch (UncheckedIOException e) {
       sasl = null;
       throw e.getCause();
     } catch (SaslAuthException | IllegalArgumentException e) {
       sasl = null;
-      writeLine(out, Constants.RECV_NG);
+      authFailed("AUTH", mechanism.getUser(), out);
     }
   }
 
@@ -311,14 +353,14 @@ public class Pop3Session {
     File userBox = findUserBox(user);
     if (userBox == null || pass.isEmpty()) {
       // ユーザー存在しない、パスワード入力なしエラー
-      writeLine(out, Constants.RECV_NG);
+      authFailed("PASS", user, out);
       return;
     }
-    if (pass.equals(readPassword(userBox))) {
-      loginResponse(userBox, out);
+    if (constantTimeEquals(pass, readPassword(userBox))) {
+      loginResponse("PASS", userBox, out);
     } else {
       // パスワードファイルなし、パスワード不一致エラー
-      writeLine(out, Constants.RECV_NG);
+      authFailed("PASS", user, out);
     }
   }
 
@@ -333,21 +375,21 @@ public class Pop3Session {
     String digest = args[2];
     File userBox = findUserBox(user);
     if (userBox == null) {
-      writeLine(out, Constants.RECV_NG);
+      authFailed("APOP", user, out);
       return;
     }
     String password = readPassword(userBox);
     if (password == null) {
       // パスワードファイルなしエラー
-      writeLine(out, Constants.RECV_NG);
+      authFailed("APOP", user, out);
       return;
     }
     try {
-      if (digest.equals(md5(timestamp + password))) {
-        loginResponse(userBox, out);
+      if (constantTimeEquals(digest, md5(timestamp + password))) {
+        loginResponse("APOP", userBox, out);
       } else {
         // パスワード不一致エラー
-        writeLine(out, Constants.RECV_NG);
+        authFailed("APOP", user, out);
       }
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
@@ -560,12 +602,63 @@ public class Pop3Session {
   }
 
   /** メールボックスをロックしてログインし、結果を応答する. */
-  private void loginResponse(File userBox, Appendable out) throws IOException {
+  private void loginResponse(String method, File userBox, Appendable out) throws IOException {
     if (login(userBox)) {
+      logger.info(auditMessage("success", method, user));
       writeLine(out, Constants.RECV_OK);
     } else {
+      logger.warning(auditMessage("in-use", method, user));
       writeLine(out, Constants.RECV_ERR_IN_USE);
     }
+  }
+
+  /** 認証失敗を記録し、遅延後に応答する. 上限に達した場合は切断対象(終了扱い)とする. */
+  private void authFailed(String method, String name, Appendable out) throws IOException {
+    logger.warning(auditMessage("failure", method, name));
+    authFailures++;
+    delay();
+    writeLine(out, Constants.RECV_NG);
+    if (authFailures >= maxAuthFailures) {
+      logger.warning(auditMessage("too many failures", method, name));
+      finished = true;
+    }
+  }
+
+  private void delay() {
+    if (authFailureDelay <= 0) {
+      return;
+    }
+    try {
+      Thread.sleep(authFailureDelay);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /** 監査ログ用のメッセージ(パスワードは含めない). */
+  private String auditMessage(String result, String method, String name) {
+    return "auth "
+        + result
+        + " method="
+        + method
+        + " user="
+        + sanitize(name)
+        + " remote="
+        + remoteAddress;
+  }
+
+  /** ログ偽装を防ぐため、制御文字を置換する. */
+  private static String sanitize(String value) {
+    return value == null ? "" : value.replaceAll("[\\p{Cntrl}]", "?");
+  }
+
+  /** 定数時間で文字列を比較する. どちらかがnullの場合はfalse. */
+  static boolean constantTimeEquals(String a, String b) {
+    if (a == null || b == null) {
+      return false;
+    }
+    return MessageDigest.isEqual(
+        a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
   }
 
   /**
