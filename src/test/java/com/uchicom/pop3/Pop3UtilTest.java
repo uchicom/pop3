@@ -85,11 +85,11 @@ class Pop3UtilTest {
   }
 
   @Test
-  void recieveLine_joinsStringsAndAppendsCrLf() {
+  void receiveLine_joinsStringsAndAppendsCrLf() {
     var out = new ByteArrayOutputStream();
     var ps = new PrintStream(out, true, StandardCharsets.UTF_8);
 
-    Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", "1", " ", "20");
+    Pop3Util.receiveLine(ps, Constants.RECV_OK, " ", "1", " ", "20");
 
     assertThat(out.toString(StandardCharsets.UTF_8)).isEqualTo("+OK 1 20\r\n");
   }

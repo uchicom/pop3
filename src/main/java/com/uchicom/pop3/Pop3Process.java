@@ -15,6 +15,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -66,7 +67,7 @@ public class Pop3Process implements ServerProcess {
       br = newReader(socket);
       ps = newPrintStream(socket);
       // 1接続に対する受付開始
-      Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
+      Pop3Util.receiveLine(ps, Constants.RECV_OK, " ", timestamp);
       int maxLine = maxLineLength();
       String line = readLine(br, maxLine);
       session = newSession(timestamp);
@@ -74,9 +75,9 @@ public class Pop3Process implements ServerProcess {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
           if (session.isAuthenticated()) {
             // 認証済みの状態でのSTLSは拒否する
-            Pop3Util.recieveLine(ps, Constants.RECV_ERR);
+            Pop3Util.receiveLine(ps, Constants.RECV_ERR);
           } else {
-            Pop3Util.recieveLine(ps, Constants.RECV_OK);
+            Pop3Util.receiveLine(ps, Constants.RECV_OK);
             socket = startTls();
             socket.setSoTimeout(readTimeout());
             // 差し替え前の br/ps は close しない(下位の平文ソケットごと閉じてしまうため)。
@@ -103,9 +104,9 @@ public class Pop3Process implements ServerProcess {
     } catch (LineTooLongException e) {
       logger.warning("line too long: " + e.getMessage());
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.log(Level.WARNING, e.getMessage(), e);
     } catch (Throwable e) {
-      e.printStackTrace();
+      logger.log(Level.WARNING, e.getMessage(), e);
     } finally {
       if (session != null) {
         // メールボックスのロックを解放する
@@ -115,14 +116,14 @@ public class Pop3Process implements ServerProcess {
         try {
           ps.close();
         } catch (Exception e) {
-          e.printStackTrace();
+          logger.log(Level.WARNING, e.getMessage(), e);
         }
       }
       if (br != null) {
         try {
           br.close();
         } catch (Exception e) {
-          e.printStackTrace();
+          logger.log(Level.WARNING, e.getMessage(), e);
         }
       }
       synchronized (lock) {
@@ -130,7 +131,7 @@ public class Pop3Process implements ServerProcess {
           try {
             socket.close();
           } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, e.getMessage(), e);
           }
           socket = null;
         }
@@ -246,13 +247,13 @@ public class Pop3Process implements ServerProcess {
     // } else {
     // rejectMap.put(senderAddress, 1);
     // }
-    System.out.println("forceClose!");
+    logger.warning("forceClose!");
     synchronized (lock) {
       if (socket != null && socket.isConnected()) {
         try {
           socket.close();
         } catch (IOException e) {
-          e.printStackTrace();
+          logger.log(Level.WARNING, e.getMessage(), e);
         }
         socket = null;
       }

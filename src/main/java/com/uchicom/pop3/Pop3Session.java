@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -184,7 +185,7 @@ public class Pop3Session {
     try (FileChannel channel = lock.channel()) {
       lock.release();
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.log(Level.WARNING, e.getMessage(), e);
     }
   }
 
@@ -439,7 +440,7 @@ public class Pop3Session {
         authFailed("APOP", user, out);
       }
     } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
+      logger.log(Level.WARNING, e.getMessage(), e);
       writeLine(out, Constants.RECV_ERR_CMD_NOT_FOUND);
     }
   }

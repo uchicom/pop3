@@ -2,8 +2,29 @@
 package com.uchicom.pop3;
 
 import java.io.PrintStream;
+import java.util.regex.Pattern;
 
 public class Pop3Util {
+
+  private static final Pattern PATTERN_USER = Pattern.compile(Constants.REG_EXP_USER);
+  private static final Pattern PATTERN_PASS = Pattern.compile(Constants.REG_EXP_PASS);
+  private static final Pattern PATTERN_STAT = Pattern.compile(Constants.REG_EXP_STAT);
+  private static final Pattern PATTERN_LIST = Pattern.compile(Constants.REG_EXP_LIST);
+  private static final Pattern PATTERN_LIST_NUM = Pattern.compile(Constants.REG_EXP_LIST_NUM);
+  private static final Pattern PATTERN_RETR = Pattern.compile(Constants.REG_EXP_RETR);
+  private static final Pattern PATTERN_RETR_NUM = Pattern.compile(Constants.REG_EXP_RETR_NUM);
+  private static final Pattern PATTERN_DELE_NUM = Pattern.compile(Constants.REG_EXP_DELE_NUM);
+  private static final Pattern PATTERN_RSET = Pattern.compile(Constants.REG_EXP_RSET);
+  private static final Pattern PATTERN_QUIT = Pattern.compile(Constants.REG_EXP_QUIT);
+  private static final Pattern PATTERN_TOP_NUM_NUM = Pattern.compile(Constants.REG_EXP_TOP_NUM_NUM);
+  private static final Pattern PATTERN_UIDL = Pattern.compile(Constants.REG_EXP_UIDL);
+  private static final Pattern PATTERN_UIDL_NUM = Pattern.compile(Constants.REG_EXP_UIDL_NUM);
+  private static final Pattern PATTERN_APOP_NAME_DIGEST =
+      Pattern.compile(Constants.REG_EXP_APOP_NAME_DIGEST);
+  private static final Pattern PATTERN_NOOP = Pattern.compile(Constants.REG_EXP_NOOP);
+  private static final Pattern PATTERN_CAPA = Pattern.compile(Constants.REG_EXP_CAPA);
+  private static final Pattern PATTERN_AUTH = Pattern.compile(Constants.REG_EXP_AUTH);
+  private static final Pattern PATTERN_STLS = Pattern.compile(Constants.REG_EXP_STLS);
 
   /**
    * コマンドがUSERかどうかをチェックする.
@@ -12,7 +33,7 @@ public class Pop3Util {
    * @return USERの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUser(String cmd) {
-    return cmd.matches(Constants.REG_EXP_USER);
+    return PATTERN_USER.matcher(cmd).matches();
   }
 
   /**
@@ -22,7 +43,7 @@ public class Pop3Util {
    * @return PASSの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isPass(String cmd) {
-    return cmd.matches(Constants.REG_EXP_PASS);
+    return PATTERN_PASS.matcher(cmd).matches();
   }
 
   /**
@@ -32,7 +53,7 @@ public class Pop3Util {
    * @return STATの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isStat(String cmd) {
-    return cmd.matches(Constants.REG_EXP_STAT);
+    return PATTERN_STAT.matcher(cmd).matches();
   }
 
   /**
@@ -42,7 +63,7 @@ public class Pop3Util {
    * @return LISTの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isList(String cmd) {
-    return cmd.matches(Constants.REG_EXP_LIST);
+    return PATTERN_LIST.matcher(cmd).matches();
   }
 
   /**
@@ -52,7 +73,7 @@ public class Pop3Util {
    * @return LIST番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isListNum(String cmd) {
-    return cmd.matches(Constants.REG_EXP_LIST_NUM);
+    return PATTERN_LIST_NUM.matcher(cmd).matches();
   }
 
   /**
@@ -62,7 +83,7 @@ public class Pop3Util {
    * @return RETRの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRetr(String cmd) {
-    return cmd.matches(Constants.REG_EXP_RETR);
+    return PATTERN_RETR.matcher(cmd).matches();
   }
 
   /**
@@ -72,7 +93,7 @@ public class Pop3Util {
    * @return RETR番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRetrNum(String cmd) {
-    return cmd.matches(Constants.REG_EXP_RETR_NUM);
+    return PATTERN_RETR_NUM.matcher(cmd).matches();
   }
 
   /**
@@ -82,7 +103,7 @@ public class Pop3Util {
    * @return DELE番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isDeleNum(String cmd) {
-    return cmd.matches(Constants.REG_EXP_DELE_NUM);
+    return PATTERN_DELE_NUM.matcher(cmd).matches();
   }
 
   /**
@@ -92,7 +113,7 @@ public class Pop3Util {
    * @return RSETの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isRset(String cmd) {
-    return cmd.matches(Constants.REG_EXP_RSET);
+    return PATTERN_RSET.matcher(cmd).matches();
   }
 
   /**
@@ -102,7 +123,7 @@ public class Pop3Util {
    * @return QUITの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isQuit(String cmd) {
-    return cmd.matches(Constants.REG_EXP_QUIT);
+    return PATTERN_QUIT.matcher(cmd).matches();
   }
 
   /**
@@ -112,7 +133,7 @@ public class Pop3Util {
    * @return TOP番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isTopNumNum(String cmd) {
-    return cmd.matches(Constants.REG_EXP_TOP_NUM_NUM);
+    return PATTERN_TOP_NUM_NUM.matcher(cmd).matches();
   }
 
   /**
@@ -122,7 +143,7 @@ public class Pop3Util {
    * @return UIDLの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUidl(String cmd) {
-    return cmd.matches(Constants.REG_EXP_UIDL);
+    return PATTERN_UIDL.matcher(cmd).matches();
   }
 
   /**
@@ -132,7 +153,7 @@ public class Pop3Util {
    * @return UIDL番号の場合はtrue,それ以外はfalseを返します
    */
   public static boolean isUidlNum(String cmd) {
-    return cmd.matches(Constants.REG_EXP_UIDL_NUM);
+    return PATTERN_UIDL_NUM.matcher(cmd).matches();
   }
 
   /**
@@ -142,7 +163,7 @@ public class Pop3Util {
    * @return APOPの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isApopNameDigest(String cmd) {
-    return cmd.matches(Constants.REG_EXP_APOP_NAME_DIGEST);
+    return PATTERN_APOP_NAME_DIGEST.matcher(cmd).matches();
   }
 
   /**
@@ -152,7 +173,7 @@ public class Pop3Util {
    * @return NOOPの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isNoop(String cmd) {
-    return cmd.matches(Constants.REG_EXP_NOOP);
+    return PATTERN_NOOP.matcher(cmd).matches();
   }
 
   /**
@@ -162,7 +183,7 @@ public class Pop3Util {
    * @return CAPAの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isCapa(String cmd) {
-    return cmd.matches(Constants.REG_EXP_CAPA);
+    return PATTERN_CAPA.matcher(cmd).matches();
   }
 
   /**
@@ -172,7 +193,7 @@ public class Pop3Util {
    * @return AUTHの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isAuth(String cmd) {
-    return cmd.matches(Constants.REG_EXP_AUTH);
+    return PATTERN_AUTH.matcher(cmd).matches();
   }
 
   /**
@@ -182,7 +203,7 @@ public class Pop3Util {
    * @return STLSの場合はtrue,それ以外はfalseを返します
    */
   public static boolean isStls(String cmd) {
-    return cmd.matches(Constants.REG_EXP_STLS);
+    return PATTERN_STLS.matcher(cmd).matches();
   }
 
   /**
@@ -216,7 +237,7 @@ public class Pop3Util {
    * @param ps 出力ストリーム
    * @param strings 出力文字列配列
    */
-  public static void recieveLine(PrintStream ps, String... strings) {
+  public static void receiveLine(PrintStream ps, String... strings) {
     for (String string : strings) {
       ps.print(string);
     }
