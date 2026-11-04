@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * POP3のコマンド処理を行うクラス.
  *
- * <p>入出力には依存せず、コマンド行を受け取って応答を {@link Appendable} に書き出す。 ブロッキングI/OとNIOのどちらからでも利用できる。
+ * <p>入出力には依存せず、コマンド行を受け取って応答を {@link Appendable} に書き出す。
  *
  * @author uchicom: Shigeki Uchiyama
  */
