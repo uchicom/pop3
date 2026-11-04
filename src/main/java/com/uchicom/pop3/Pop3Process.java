@@ -66,6 +66,7 @@ public class Pop3Process implements ServerProcess {
             + ">";
     BufferedReader br = null;
     PrintStream ps = null;
+    Pop3Session session = null;
     try {
       socket.setSoTimeout(readTimeout());
       br = newReader(socket);
@@ -74,7 +75,7 @@ public class Pop3Process implements ServerProcess {
       Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
       int maxLine = maxLineLength();
       String line = readLine(br, maxLine);
-      Pop3Session session = new Pop3Session(parameter.getFile("dir"), timestamp);
+      session = new Pop3Session(parameter.getFile("dir"), timestamp);
       while (line != null) {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
           if (session.isAuthenticated()) {
@@ -113,6 +114,10 @@ public class Pop3Process implements ServerProcess {
     } catch (Throwable e) {
       e.printStackTrace();
     } finally {
+      if (session != null) {
+        // メールボックスのロックを解放する
+        session.close();
+      }
       if (ps != null) {
         try {
           ps.close();

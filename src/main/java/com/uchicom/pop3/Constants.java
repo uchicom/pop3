@@ -34,6 +34,9 @@ public class Constants {
   public static String RECV_ERR_AUTH_TLS_REQUIRED =
       "-ERR [AUTH] STLS required before authentication";
 
+  /** 返却メッセージ(メールボックス使用中:RFC 3206 の [IN-USE] 応答コード) */
+  public static String RECV_ERR_IN_USE = "-ERR [IN-USE] Mailbox is locked by another session";
+
   /** 返却メッセージ(-ERR(行終端文字列あり) */
   public static String RECV_ERR_LINE_END = "-ERR" + RECV_LINE_END;
 
@@ -104,6 +107,9 @@ public class Constants {
 
   /** パスワードファイルのパス */
   public static String PASSWORD_FILE_NAME = ".pop3";
+
+  /** メールボックスの排他ロックファイルのパス */
+  public static String LOCK_FILE_NAME = ".lock";
 
   // 初期設定
   /** デフォルトメールボックスディレクトリ */

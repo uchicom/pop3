@@ -7,6 +7,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,6 +25,11 @@ class ScramAuthTest {
     assertThat(box.mkdir()).isTrue();
     Files.writeString(new File(box, Constants.PASSWORD_FILE_NAME).toPath(), "secret");
     session = new Pop3Session(base, "<1.2@localhost>");
+  }
+
+  @AfterEach
+  void tearDown() {
+    session.close();
   }
 
   String run(String line) throws Exception {
@@ -123,6 +129,7 @@ class ScramAuthTest {
   @Test
   void scram_success() throws Exception {
     for (var algorithm : ScramAlgorithm.values()) {
+      session.close();
       session = new Pop3Session(base, "<1.2@localhost>");
       assertThat(scram(algorithm, "secret", false)).isEqualTo("+OK\r\n");
       assertThat(session.isAuthenticated()).isTrue();
