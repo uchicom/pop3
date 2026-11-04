@@ -348,24 +348,20 @@ class Pop3ProcessTest {
   }
 
   @Test
-  void stls_discardsUserEnteredBeforeTls() throws Exception {
+  void stls_rejectsAuthenticationBeforeTls() throws Exception {
     startTlsServer();
 
-    assertThat(send("USER alice")).startsWith("+OK");
+    assertThat(send("USER alice")).startsWith("-ERR [AUTH]");
+    assertThat(send("PASS secret")).startsWith("-ERR [AUTH]");
+    assertThat(send("APOP alice 0123456789abcdef0123456789abcdef")).startsWith("-ERR [AUTH]");
+    assertThat(send("AUTH SCRAM-SHA-256")).startsWith("-ERR [AUTH]");
+    assertThat(send("STAT")).startsWith("-NG");
+
     assertThat(send("STLS")).startsWith("+OK");
     upgradeClient();
 
+    // TLS確立後は認証できる
     assertThat(send("PASS secret")).startsWith("-NG");
     login();
-  }
-
-  @Test
-  void stls_rejectedAfterAuthentication() throws Exception {
-    startTlsServer();
-
-    login();
-    assertThat(send("STLS")).startsWith("-NG");
-    // 平文のまま継続できる
-    assertThat(send("STAT")).startsWith("+OK 2");
   }
 }

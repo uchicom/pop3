@@ -30,6 +30,10 @@ public class Constants {
   /** 返却メッセージ(-NG(コマンド未対応)) */
   public static String RECV_NG_CMD_NOT_FOUND = "-NG Command not support";
 
+  /** 返却メッセージ(TLS確立前の認証拒否:RFC 3206 の [AUTH] 応答コード) */
+  public static String RECV_ERR_AUTH_TLS_REQUIRED =
+      "-ERR [AUTH] STLS required before authentication";
+
   /** 返却メッセージ(-ERR(行終端文字列あり) */
   public static String RECV_ERR_LINE_END = "-ERR" + RECV_LINE_END;
 

@@ -95,6 +95,25 @@ class ScramAuthTest {
   }
 
   @Test
+  void capa_beforeTls_hidesAuthCapabilities() throws Exception {
+    session.setStlsAvailable(true);
+    assertThat(run("CAPA"))
+        .isEqualTo("+OK Capability list follows\r\nTOP\r\nUIDL\r\nSTLS\r\n.\r\n");
+  }
+
+  @Test
+  void auth_beforeTls_isRejected() throws Exception {
+    session.setStlsAvailable(true);
+    var expected = Constants.RECV_ERR_AUTH_TLS_REQUIRED + "\r\n";
+    assertThat(run("AUTH")).isEqualTo(expected);
+    assertThat(run("AUTH SCRAM-SHA-256 " + b64("n,,n=alice,r=abc"))).isEqualTo(expected);
+    assertThat(run("USER alice")).isEqualTo(expected);
+    assertThat(run("PASS secret")).isEqualTo(expected);
+    assertThat(run("APOP alice 0123456789abcdef0123456789abcdef")).isEqualTo(expected);
+    assertThat(session.isAuthenticated()).isFalse();
+  }
+
+  @Test
   void auth_list() throws Exception {
     assertThat(run("AUTH"))
         .isEqualTo(
