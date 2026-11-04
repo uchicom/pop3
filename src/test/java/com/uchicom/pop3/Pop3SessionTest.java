@@ -7,6 +7,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,6 +37,11 @@ class Pop3SessionTest {
     assertThat(mail1.setLastModified(1_000_000L)).isTrue();
     assertThat(mail2.setLastModified(2_000_000L)).isTrue();
     session = new Pop3Session(base, TIMESTAMP);
+  }
+
+  @AfterEach
+  void tearDown() {
+    session.close();
   }
 
   String run(String... lines) throws Exception {
@@ -165,20 +171,41 @@ class Pop3SessionTest {
   void uidl() throws Exception {
     login();
 
-    assertThat(run("UIDL")).isEqualTo("+OK\r\n1 mail1\r\n2 mail2\r\n.\r\n");
-    assertThat(run("UIDL 2")).isEqualTo("+OK 2 mail2\r\n");
+    assertThat(run("UIDL"))
+        .isEqualTo("+OK\r\n1 " + uid("mail1") + "\r\n2 " + uid("mail2") + "\r\n.\r\n");
+    assertThat(run("UIDL 2")).isEqualTo("+OK 2 " + uid("mail2") + "\r\n");
     assertThat(run("UIDL 3")).isEqualTo("-NG\r\n");
   }
 
   @Test
-  void uidl_longNameIsTruncatedToLast70() throws Exception {
-    var longName = "a".repeat(10) + "b".repeat(70);
-    var longMail = new File(mail1.getParentFile(), longName);
-    Files.writeString(longMail.toPath(), "x");
-    assertThat(longMail.setLastModified(3_000_000L)).isTrue();
+  void uidl_isUniqueAndUsesAllowedCharacters() throws Exception {
+    var names = new String[] {"a~1", "b~1", "with space", "日本語", "a".repeat(10) + "b".repeat(70)};
+    var time = 3_000_000L;
+    for (var name : names) {
+      var file = new File(mail1.getParentFile(), name);
+      Files.writeString(file.toPath(), "x");
+      assertThat(file.setLastModified(time++)).isTrue();
+    }
     login();
 
-    assertThat(run("UIDL 3")).isEqualTo("+OK 3 " + "b".repeat(70) + "\r\n");
+    var uids = new java.util.HashSet<String>();
+    for (var i = 1; i <= 2 + names.length; i++) {
+      var response = run("UIDL " + i).trim();
+      var uid = response.substring(("+OK " + i + " ").length());
+      assertThat(uid).matches("[\\x21-\\x7E]{1,70}");
+      uids.add(uid);
+    }
+    assertThat(uids).hasSize(2 + names.length);
+  }
+
+  /** ファイル名のSHA-256(16進)。UIDLの期待値. */
+  static String uid(String name) throws Exception {
+    var digest = new StringBuilder();
+    for (var b :
+        MessageDigest.getInstance("SHA-256").digest(name.getBytes(StandardCharsets.UTF_8))) {
+      digest.append(String.format("%02x", b & 0xFF));
+    }
+    return digest.toString();
   }
 
   @Test
@@ -198,6 +225,93 @@ class Pop3SessionTest {
     assertThat(session.isFinished()).isTrue();
     assertThat(mail1).doesNotExist();
     assertThat(mail2).exists();
+  }
+
+  @Test
+  void dele_twice_isRejected() throws Exception {
+    login();
+
+    assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
+    assertThat(run("DELE 1")).isEqualTo("-NG\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 1 " + octets(mail2) + "\r\n");
+  }
+
+  @Test
+  void quit_deleteFailure_returnsNg() throws Exception {
+    login();
+    assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
+    // 他の要因で先に消えていて削除できない状況
+    assertThat(mail1.delete()).isTrue();
+
+    assertThat(run("QUIT")).isEqualTo("-NG\r\n");
+    assertThat(session.isFinished()).isTrue();
+  }
+
+  @Test
+  void quit_withoutLogin_returnsOk() throws Exception {
+    assertThat(run("QUIT")).isEqualTo("+OK\r\n");
+    assertThat(session.isFinished()).isTrue();
+  }
+
+  @Test
+  void size_isCachedAtLogin() throws Exception {
+    login();
+    var size = octets(mail1);
+    writeMail("Subject: changed\n\nlonger body than before\n");
+
+    assertThat(run("LIST 1")).isEqualTo("+OK 1 " + size + "\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 2 " + (size + octets(mail2)) + "\r\n");
+  }
+
+  @Test
+  void top_emptyFirstLine_endsHeaderImmediately() throws Exception {
+    writeMail("\nline1\nline2\n");
+    login();
+
+    assertThat(run("TOP 1 1")).isEqualTo("+OK\r\n\r\nline1\r\n.\r\n");
+    assertThat(run("TOP 1 0")).isEqualTo("+OK\r\n\r\n.\r\n");
+  }
+
+  @Test
+  void mailbox_isLockedWhileInUse() throws Exception {
+    login();
+    var other = new Pop3Session(base, TIMESTAMP);
+    var out = new StringBuilder();
+
+    other.execute("USER alice", out);
+    other.execute("PASS secret", out);
+
+    assertThat(out.toString()).isEqualTo("+OK\r\n" + Constants.RECV_ERR_IN_USE + "\r\n");
+    assertThat(other.isAuthenticated()).isFalse();
+    other.close();
+  }
+
+  @Test
+  void mailbox_lockIsReleasedOnQuitAndClose() throws Exception {
+    login();
+    run("QUIT");
+    var second = new Pop3Session(base, TIMESTAMP);
+    var out = new StringBuilder();
+    second.execute("USER alice", out);
+    second.execute("PASS secret", out);
+    assertThat(second.isAuthenticated()).isTrue();
+
+    // 接続断など QUIT なしでも close で解放される
+    second.close();
+    second.close();
+    var third = new Pop3Session(base, TIMESTAMP);
+    third.execute("USER alice", out);
+    third.execute("PASS secret", out);
+    assertThat(third.isAuthenticated()).isTrue();
+    third.close();
+  }
+
+  @Test
+  void lockFile_isNotListedAsMail() throws Exception {
+    login();
+
+    assertThat(new File(mail1.getParentFile(), Constants.LOCK_FILE_NAME)).exists();
+    assertThat(run("STAT")).isEqualTo("+OK 2 " + (octets(mail1) + octets(mail2)) + "\r\n");
   }
 
   @Test

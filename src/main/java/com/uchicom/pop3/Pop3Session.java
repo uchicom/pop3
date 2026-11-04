@@ -6,7 +6,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -66,6 +70,12 @@ public class Pop3Session {
   /** 削除リスト(認証成功時に設定される) */
   private List<File> delList;
 
+  /** メールごとのオクテット数。mailList と同じ順(認証成功時に計算される) */
+  private List<Long> sizeList;
+
+  /** メールボックスの排他ロック(認証成功中のみ保持) */
+  private FileLock mailboxLock;
+
   /**
    * コンストラクタ.
    *
@@ -104,6 +114,20 @@ public class Pop3Session {
    */
   public boolean isFinished() {
     return finished;
+  }
+
+  /** メールボックスのロックを解放する. 接続の終了時に呼び出す. 複数回呼び出しても良い. */
+  public void close() {
+    FileLock lock = mailboxLock;
+    if (lock == null) {
+      return;
+    }
+    mailboxLock = null;
+    try (FileChannel channel = lock.channel()) {
+      lock.release();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   /**
@@ -237,8 +261,7 @@ public class Pop3Session {
         writeLine(out, Constants.RECV_NG);
         return;
       }
-      login(userBox);
-      writeLine(out, Constants.RECV_OK);
+      loginResponse(userBox, out);
     } catch (UncheckedIOException e) {
       sasl = null;
       throw e.getCause();
@@ -292,8 +315,7 @@ public class Pop3Session {
       return;
     }
     if (pass.equals(readPassword(userBox))) {
-      login(userBox);
-      writeLine(out, Constants.RECV_OK);
+      loginResponse(userBox, out);
     } else {
       // パスワードファイルなし、パスワード不一致エラー
       writeLine(out, Constants.RECV_NG);
@@ -322,8 +344,7 @@ public class Pop3Session {
     }
     try {
       if (digest.equals(md5(timestamp + password))) {
-        login(userBox);
-        writeLine(out, Constants.RECV_OK);
+        loginResponse(userBox, out);
       } else {
         // パスワード不一致エラー
         writeLine(out, Constants.RECV_NG);
@@ -341,9 +362,9 @@ public class Pop3Session {
     }
     long fileLength = 0;
     int fileCnt = 0;
-    for (File child : mailList) {
-      if (!delList.contains(child)) {
-        fileLength += octets(child);
+    for (int i = 0; i < mailList.size(); i++) {
+      if (!delList.contains(mailList.get(i))) {
+        fileLength += sizeList.get(i);
         fileCnt++;
       }
     }
@@ -360,7 +381,7 @@ public class Pop3Session {
     for (int i = 0; i < mailList.size(); i++) {
       File child = mailList.get(i);
       if (!delList.contains(child)) {
-        writeLine(out, String.valueOf(i + 1), " ", String.valueOf(octets(child)));
+        writeLine(out, String.valueOf(i + 1), " ", String.valueOf(sizeList.get(i)));
       }
     }
     writeLine(out, Constants.RECV_DATA);
@@ -368,12 +389,12 @@ public class Pop3Session {
 
   void listNum(String line, Appendable out) throws IOException {
     String[] args = Pop3Util.splitArgs(line);
-    File child = findMail(args[1]);
-    if (child == null) {
+    int index = findMail(args[1]);
+    if (index < 0) {
       writeLine(out, Constants.RECV_NG);
       return;
     }
-    writeLine(out, Constants.RECV_OK, " ", args[1], " ", String.valueOf(octets(child)));
+    writeLine(out, Constants.RECV_OK, " ", args[1], " ", String.valueOf(sizeList.get(index)));
   }
 
   void retr(Appendable out) throws IOException {
@@ -392,13 +413,13 @@ public class Pop3Session {
 
   void retrNum(String line, Appendable out) throws IOException {
     String[] args = Pop3Util.splitArgs(line);
-    File child = findMail(args[1]);
-    if (child == null) {
+    int index = findMail(args[1]);
+    if (index < 0) {
       writeLine(out, Constants.RECV_NG);
       return;
     }
-    writeLine(out, Constants.RECV_OK, " ", String.valueOf(octets(child)));
-    writeFile(out, child);
+    writeLine(out, Constants.RECV_OK, " ", String.valueOf(sizeList.get(index)));
+    writeFile(out, mailList.get(index));
     writeLine(out, Constants.RECV_DATA);
   }
 
@@ -408,11 +429,11 @@ public class Pop3Session {
       return;
     }
     int index = Pop3Util.parseNumber(Pop3Util.splitArgs(line)[1]) - 1;
-    if (0 <= index && index < mailList.size()) {
+    if (0 <= index && index < mailList.size() && !delList.contains(mailList.get(index))) {
       delList.add(mailList.get(index));
       writeLine(out, Constants.RECV_OK);
     } else {
-      // index範囲外
+      // index範囲外、または削除済み
       writeLine(out, Constants.RECV_NG);
     }
   }
@@ -428,38 +449,42 @@ public class Pop3Session {
   }
 
   void quit(Appendable out) throws IOException {
+    boolean deleted = true;
     if (delList != null) {
-      // 消去マークの入ったファイルを削除する
+      // 消去マークの入ったファイルを削除する。失敗しても残りは削除を試みる
       for (File delFile : delList) {
-        delFile.delete();
+        if (!delFile.delete()) {
+          deleted = false;
+        }
       }
     }
-    writeLine(out, Constants.RECV_OK);
+    writeLine(out, deleted ? Constants.RECV_OK : Constants.RECV_NG);
     finished = true;
+    close();
   }
 
   void topNumNum(String line, Appendable out) throws IOException {
     String[] args = Pop3Util.splitArgs(line);
-    File child = findMail(args[1]);
+    int index = findMail(args[1]);
     int maxRow = Pop3Util.parseNumber(args[2]);
-    if (child == null || maxRow < 0) {
+    if (index < 0 || maxRow < 0) {
       writeLine(out, Constants.RECV_NG);
       return;
     }
     writeLine(out, Constants.RECV_OK);
-    try (BufferedReader reader = newReader(child)) {
-      String readLine = reader.readLine();
+    try (BufferedReader reader = newReader(mailList.get(index))) {
       int row = 0;
       boolean messageHead = true;
-      while (readLine != null && (messageHead || row <= maxRow)) {
+      String readLine = reader.readLine();
+      while (readLine != null && (messageHead || row < maxRow)) {
         writeMailLine(out, readLine);
-        readLine = reader.readLine();
         if (!messageHead) {
           row++;
-        }
-        if ("".equals(readLine)) {
+        } else if (readLine.isEmpty()) {
+          // 空行でヘッダ終了(先頭行が空行の場合も含む)
           messageHead = false;
         }
+        readLine = reader.readLine();
       }
     }
     writeLine(out, Constants.RECV_DATA);
@@ -482,25 +507,24 @@ public class Pop3Session {
 
   void uidlNum(String line, Appendable out) throws IOException {
     String[] args = Pop3Util.splitArgs(line);
-    File child = findMail(args[1]);
-    if (child == null) {
+    int index = findMail(args[1]);
+    if (index < 0) {
       writeLine(out, Constants.RECV_NG);
       return;
     }
-    writeLine(out, Constants.RECV_OK, " ", args[1], " ", toUid(child));
+    writeLine(out, Constants.RECV_OK, " ", args[1], " ", toUid(mailList.get(index)));
   }
 
-  /** 認証済みで、指定番号のメールが存在し削除予定でない場合にそのファイルを返す. */
-  private File findMail(String number) {
+  /** 認証済みで、指定番号のメールが存在し削除予定でない場合にそのインデックスを返す. 該当しない場合は-1. */
+  private int findMail(String number) {
     if (!bPass) {
-      return null;
+      return -1;
     }
     int index = Pop3Util.parseNumber(number) - 1;
     if (index < 0 || mailList.size() <= index) {
-      return null;
+      return -1;
     }
-    File child = mailList.get(index);
-    return delList.contains(child) ? null : child;
+    return delList.contains(mailList.get(index)) ? -1 : index;
   }
 
   /** ユーザーのメールボックスを探す. 存在しない場合はnullを返す. */
@@ -535,8 +559,55 @@ public class Pop3Session {
     }
   }
 
-  /** 認証成功時にメールリストを読み込む. */
-  private void login(File userBox) {
+  /** メールボックスをロックしてログインし、結果を応答する. */
+  private void loginResponse(File userBox, Appendable out) throws IOException {
+    if (login(userBox)) {
+      writeLine(out, Constants.RECV_OK);
+    } else {
+      writeLine(out, Constants.RECV_ERR_IN_USE);
+    }
+  }
+
+  /**
+   * メールボックスをロックし、メールリストとサイズを読み込む.
+   *
+   * @return ロックを取得できず、使用中の場合はfalse
+   */
+  private boolean login(File userBox) throws IOException {
+    if (!lock(userBox)) {
+      return false;
+    }
+    try {
+      load(userBox);
+    } catch (IOException | RuntimeException e) {
+      close();
+      throw e;
+    }
+    bPass = true;
+    return true;
+  }
+
+  /** メールボックスの排他ロックを取得する. 他の接続が保持している場合はfalse. */
+  private boolean lock(File userBox) throws IOException {
+    RandomAccessFile file = new RandomAccessFile(new File(userBox, Constants.LOCK_FILE_NAME), "rw");
+    try {
+      FileLock lock = file.getChannel().tryLock();
+      if (lock != null) {
+        mailboxLock = lock;
+        return true;
+      }
+    } catch (OverlappingFileLockException e) {
+      // 同一プロセス内の他の接続が保持している
+    } catch (IOException | RuntimeException e) {
+      file.close();
+      throw e;
+    }
+    file.close();
+    return false;
+  }
+
+  /** メールリストとサイズを読み込む. */
+  private void load(File userBox) throws IOException {
     File[] mails =
         userBox.listFiles(
             (dir, name) -> {
@@ -544,12 +615,16 @@ public class Pop3Session {
               return file.isFile()
                   && !file.isHidden()
                   && file.canRead()
-                  && !Constants.PASSWORD_FILE_NAME.equals(name);
+                  && !Constants.PASSWORD_FILE_NAME.equals(name)
+                  && !Constants.LOCK_FILE_NAME.equals(name);
             });
     mailList = Arrays.asList(mails == null ? new File[0] : mails);
     Collections.sort(mailList, FileComparator.instance);
+    sizeList = new ArrayList<>(mailList.size());
+    for (File mail : mailList) {
+      sizeList.add(octets(mail));
+    }
     delList = new ArrayList<>();
-    bPass = true;
   }
 
   private static String md5(String value) throws NoSuchAlgorithmException {
@@ -561,13 +636,21 @@ public class Pop3Session {
     return builder.toString();
   }
 
+  /** ファイル名全体から導出した、使用可能文字(0x21〜0x7E)のみで70文字以内の一意値を返す. */
   private static String toUid(File child) {
-    String name = child.getName();
-    int lastIndex = name.lastIndexOf('~');
-    if (lastIndex >= 0) {
-      return name.substring(lastIndex);
+    try {
+      byte[] bytes =
+          MessageDigest.getInstance("SHA-256")
+              .digest(child.getName().getBytes(StandardCharsets.UTF_8));
+      StringBuilder builder = new StringBuilder(64);
+      for (byte b : bytes) {
+        builder.append(String.format("%02x", b & 0xFF));
+      }
+      return builder.toString();
+    } catch (NoSuchAlgorithmException e) {
+      // SHA-256 は全JREで必須
+      throw new IllegalStateException(e);
     }
-    return name.length() > 70 ? name.substring(name.length() - 70) : name;
   }
 
   /** ファイルをバイト単位で扱うため、ISO_8859_1 で読む. */

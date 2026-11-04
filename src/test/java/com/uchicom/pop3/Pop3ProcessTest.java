@@ -195,8 +195,9 @@ class Pop3ProcessTest {
     login();
 
     assertThat(send("UIDL")).startsWith("+OK");
-    assertThat(readMultiLine()).containsExactly("1 mail1", "2 mail2");
-    assertThat(send("UIDL 2")).isEqualTo("+OK 2 mail2");
+    assertThat(readMultiLine())
+        .containsExactly("1 " + Pop3SessionTest.uid("mail1"), "2 " + Pop3SessionTest.uid("mail2"));
+    assertThat(send("UIDL 2")).isEqualTo("+OK 2 " + Pop3SessionTest.uid("mail2"));
     assertThat(send("UIDL 3")).startsWith("-NG");
   }
 
