@@ -3,7 +3,6 @@ package com.uchicom.pop3;
 
 import com.uchicom.server.MultiSocketServer;
 import com.uchicom.server.PoolSocketServer;
-import com.uchicom.server.SelectorServer;
 import com.uchicom.server.Server;
 import com.uchicom.server.SingleSocketServer;
 import com.uchicom.util.Parameter;
@@ -78,14 +77,8 @@ public class Pop3Parameter extends Parameter {
                   return new Pop3Process(a, b);
                 });
         break;
-      case "selector":
-        server =
-            new SelectorServer(
-                this,
-                () -> {
-                  return new Pop3Handler(getFile("dir"), get("host"));
-                });
-        break;
+      default:
+        throw new IllegalArgumentException("unknown type: " + get("type"));
     }
     return server;
   }
