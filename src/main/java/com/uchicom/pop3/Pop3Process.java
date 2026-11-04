@@ -74,6 +74,7 @@ public class Pop3Process implements ServerProcess {
           br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
           ps = new PrintStream(socket.getOutputStream());
         } else {
+          session.setStlsAvailable(hasKeyStore() && isNotSslSocket());
           session.execute(line, ps);
           ps.flush();
           if (session.isFinished()) {
