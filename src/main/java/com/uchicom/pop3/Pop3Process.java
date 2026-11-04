@@ -34,6 +34,9 @@ public class Pop3Process implements ServerProcess {
 
   private Socket socket;
 
+  /** socket の close/null 化を排他するロック(socket 自体は null になるためロックに使えない) */
+  private final Object lock = new Object();
+
   /** 最終処理時刻 */
   private long lastTime = System.currentTimeMillis();
 
@@ -116,7 +119,7 @@ public class Pop3Process implements ServerProcess {
           e.printStackTrace();
         }
       }
-      synchronized (socket) {
+      synchronized (lock) {
         if (socket != null) {
           try {
             socket.close();
@@ -159,13 +162,15 @@ public class Pop3Process implements ServerProcess {
     // rejectMap.put(senderAddress, 1);
     // }
     System.out.println("forceClose!");
-    if (socket != null && socket.isConnected()) {
-      try {
-        socket.close();
-      } catch (IOException e) {
-        e.printStackTrace();
+    synchronized (lock) {
+      if (socket != null && socket.isConnected()) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+        socket = null;
       }
-      socket = null;
     }
   }
 

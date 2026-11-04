@@ -139,6 +139,17 @@ class ScramAuthTest {
   }
 
   @Test
+  void scram_nonAsciiPassword() throws Exception {
+    Files.writeString(
+        new File(new File(base, "alice"), Constants.PASSWORD_FILE_NAME).toPath(),
+        "パスワード",
+        StandardCharsets.UTF_8);
+
+    assertThat(scram(ScramAlgorithm.SHA_256, "パスワード", false)).isEqualTo("+OK\r\n");
+    assertThat(session.isAuthenticated()).isTrue();
+  }
+
+  @Test
   void scram_wrongPassword() throws Exception {
     assertThat(scram(ScramAlgorithm.SHA_256, "wrong", false)).isEqualTo("-NG\r\n");
     assertThat(session.isAuthenticated()).isFalse();
