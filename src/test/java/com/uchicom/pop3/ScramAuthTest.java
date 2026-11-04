@@ -92,7 +92,8 @@ class ScramAuthTest {
   void capa() throws Exception {
     assertThat(run("CAPA"))
         .isEqualTo(
-            "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n"
+            "+OK Capability list follows\r\nTOP\r\nRESP-CODES\r\nPIPELINING\r\n"
+                + "IMPLEMENTATION uchicom-pop3\r\nUSER\r\nUIDL\r\n"
                 + "SASL SCRAM-SHA-512 SCRAM-SHA-384 SCRAM-SHA-256 SCRAM-SHA-224 SCRAM-SHA-1\r\n"
                 + ".\r\n");
 
@@ -104,7 +105,9 @@ class ScramAuthTest {
   void capa_beforeTls_hidesAuthCapabilities() throws Exception {
     session.setStlsAvailable(true);
     assertThat(run("CAPA"))
-        .isEqualTo("+OK Capability list follows\r\nTOP\r\nUIDL\r\nSTLS\r\n.\r\n");
+        .isEqualTo(
+            "+OK Capability list follows\r\nTOP\r\nRESP-CODES\r\nPIPELINING\r\n"
+                + "IMPLEMENTATION uchicom-pop3\r\nUIDL\r\nSTLS\r\n.\r\n");
   }
 
   @Test
@@ -142,7 +145,7 @@ class ScramAuthTest {
     assertThat(scram(ScramAlgorithm.SHA_256, "secret", true)).isEqualTo("+OK\r\n");
     assertThat(session.isAuthenticated()).isTrue();
     // 認証後の再認証はエラー
-    assertThat(run("AUTH SCRAM-SHA-256")).isEqualTo("-NG\r\n");
+    assertThat(run("AUTH SCRAM-SHA-256")).isEqualTo("-ERR\r\n");
   }
 
   @Test
@@ -158,7 +161,7 @@ class ScramAuthTest {
 
   @Test
   void scram_wrongPassword() throws Exception {
-    assertThat(scram(ScramAlgorithm.SHA_256, "wrong", false)).isEqualTo("-NG\r\n");
+    assertThat(scram(ScramAlgorithm.SHA_256, "wrong", false)).isEqualTo("-ERR\r\n");
     assertThat(session.isAuthenticated()).isFalse();
   }
 
@@ -167,23 +170,23 @@ class ScramAuthTest {
     var reply = run("AUTH SCRAM-SHA-1 " + b64("n,,n=nobody,r=abc"));
     assertThat(reply).startsWith("+ ");
     assertThat(unb64(reply.substring(2).trim())).matches("r=abc.+,s=.+,i=4096");
-    assertThat(run(b64("c=biws,r=abc,p=AAAA"))).isEqualTo("-NG\r\n");
+    assertThat(run(b64("c=biws,r=abc,p=AAAA"))).isEqualTo("-ERR\r\n");
     assertThat(session.isAuthenticated()).isFalse();
   }
 
   @Test
   void auth_errors() throws Exception {
-    assertThat(run("AUTH UNKNOWN")).isEqualTo("-NG\r\n");
+    assertThat(run("AUTH UNKNOWN")).isEqualTo("-ERR\r\n");
     // PLUSは未対応
-    assertThat(run("AUTH SCRAM-SHA-256-PLUS")).isEqualTo("-NG\r\n");
+    assertThat(run("AUTH SCRAM-SHA-256-PLUS")).isEqualTo("-ERR\r\n");
     // チャネルバインディング要求は拒否
     assertThat(run("AUTH SCRAM-SHA-256 " + b64("p=tls-unique,,n=alice,r=abc")))
-        .isEqualTo("-NG\r\n");
+        .isEqualTo("-ERR\r\n");
     // 不正なbase64
-    assertThat(run("AUTH SCRAM-SHA-256 !!!")).isEqualTo("-NG\r\n");
+    assertThat(run("AUTH SCRAM-SHA-256 !!!")).isEqualTo("-ERR\r\n");
     // 中断
     assertThat(run("AUTH SCRAM-SHA-256")).isEqualTo("+ \r\n");
-    assertThat(run("*")).isEqualTo("-NG\r\n");
+    assertThat(run("*")).isEqualTo("-ERR\r\n");
     // 中断後は通常のコマンドに戻る
     assertThat(run("NOOP")).isEqualTo("+OK\r\n");
     assertThat(session.isAuthenticated()).isFalse();
