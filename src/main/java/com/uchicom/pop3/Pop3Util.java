@@ -166,6 +166,16 @@ public class Pop3Util {
   }
 
   /**
+   * コマンドがAUTHかどうかをチェックする.
+   *
+   * @param cmd コマンド行
+   * @return AUTHの場合はtrue,それ以外はfalseを返します
+   */
+  public static boolean isAuth(String cmd) {
+    return cmd.matches(Constants.REG_EXP_AUTH);
+  }
+
+  /**
    * コマンドがSTLSかどうかをチェックする.
    *
    * @param cmd コマンド行

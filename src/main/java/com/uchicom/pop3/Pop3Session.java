@@ -6,10 +6,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
@@ -21,6 +25,16 @@ import java.util.List;
  * @author uchicom: Shigeki Uchiyama
  */
 public class Pop3Session {
+
+  /** SCRAMの反復回数 */
+  private static final int SCRAM_ITERATIONS = 4096;
+
+  /** SCRAMのソルト生成用のプロセス固有の秘密値 */
+  private static final byte[] SERVER_SECRET = new byte[32];
+
+  static {
+    new SecureRandom().nextBytes(SERVER_SECRET);
+  }
 
   /** メールボックスのベースディレクトリ */
   private final File base;
@@ -40,6 +54,12 @@ public class Pop3Session {
   /** ユーザー名 */
   private String user;
 
+  /** 実行中のSASL認証(AUTH実行中でなければnull) */
+  private SaslMechanism sasl;
+
+  /** STLSが利用可能かどうか(CAPAで通知する) */
+  private boolean stlsAvailable;
+
   /** メールボックス内のリスト(認証成功時に設定される) */
   private List<File> mailList;
 
@@ -55,6 +75,15 @@ public class Pop3Session {
   public Pop3Session(File base, String timestamp) {
     this.base = base;
     this.timestamp = timestamp;
+  }
+
+  /**
+   * STLSが利用可能かどうかを設定する. CAPAの応答に反映される.
+   *
+   * @param stlsAvailable 利用可能な場合はtrue
+   */
+  public void setStlsAvailable(boolean stlsAvailable) {
+    this.stlsAvailable = stlsAvailable;
   }
 
   /**
@@ -83,7 +112,15 @@ public class Pop3Session {
    * @throws IOException ファイル読み取り時、または出力時に発生
    */
   public void execute(String line, Appendable out) throws IOException {
-    if (Pop3Util.isUser(line)) {
+    if (sasl != null) {
+      authResponse(line, out);
+      return;
+    }
+    if (Pop3Util.isCapa(line)) {
+      capa(out);
+    } else if (Pop3Util.isAuth(line)) {
+      auth(line, out);
+    } else if (Pop3Util.isUser(line)) {
       user(line, out);
     } else if (Pop3Util.isPass(line)) {
       pass(line, out);
@@ -117,6 +154,100 @@ public class Pop3Session {
       // 何もしない
     } else {
       writeLine(out, Constants.RECV_NG_CMD_NOT_FOUND);
+    }
+  }
+
+  void capa(Appendable out) throws IOException {
+    writeLine(out, Constants.RECV_OK, " Capability list follows");
+    writeLine(out, "TOP");
+    writeLine(out, "USER");
+    writeLine(out, "UIDL");
+    StringBuilder mechanisms = new StringBuilder("SASL");
+    for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
+      mechanisms.append(' ').append(algorithm.getMechanismName());
+    }
+    writeLine(out, mechanisms.toString());
+    if (stlsAvailable) {
+      writeLine(out, "STLS");
+    }
+    writeLine(out, Constants.RECV_DATA);
+  }
+
+  void auth(String line, Appendable out) throws IOException {
+    String[] args = Pop3Util.splitArgs(line);
+    if (bPass) {
+      writeLine(out, Constants.RECV_NG);
+      return;
+    }
+    if (args.length == 1) {
+      // 対応機構の一覧
+      writeLine(out, Constants.RECV_OK);
+      for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
+        writeLine(out, algorithm.getMechanismName());
+      }
+      writeLine(out, Constants.RECV_DATA);
+      return;
+    }
+    ScramAlgorithm algorithm = ScramAlgorithm.find(args[1]);
+    if (algorithm == null) {
+      writeLine(out, Constants.RECV_NG);
+      return;
+    }
+    sasl = new ScramMechanism(algorithm, this::findScramCredential);
+    if (args.length == 2) {
+      // 初期応答なし:空のチャレンジを送る
+      writeLine(out, "+ ");
+    } else {
+      authResponse(args[2], out);
+    }
+  }
+
+  /** AUTH実行中のクライアント応答(base64)を処理する. */
+  void authResponse(String line, Appendable out) throws IOException {
+    SaslMechanism mechanism = sasl;
+    try {
+      if ("*".equals(line)) {
+        throw new SaslAuthException("cancelled");
+      }
+      // 初期応答の"="は空の応答
+      byte[] response = "=".equals(line) ? new byte[0] : Base64.getDecoder().decode(line);
+      byte[] challenge = mechanism.step(response);
+      if (!mechanism.isComplete()) {
+        writeLine(out, "+ ", Base64.getEncoder().encodeToString(challenge));
+        return;
+      }
+      sasl = null;
+      user = mechanism.getUser();
+      File userBox = findUserBox(user);
+      if (userBox == null) {
+        writeLine(out, Constants.RECV_NG);
+        return;
+      }
+      login(userBox);
+      writeLine(out, Constants.RECV_OK);
+    } catch (UncheckedIOException e) {
+      sasl = null;
+      throw e.getCause();
+    } catch (SaslAuthException | IllegalArgumentException e) {
+      sasl = null;
+      writeLine(out, Constants.RECV_NG);
+    }
+  }
+
+  /** SCRAMの資格情報をパスワードから導出する. 存在しないユーザーにも導出値を返す. */
+  private ScramCredential findScramCredential(String name, ScramAlgorithm algorithm) {
+    try {
+      File userBox = findUserBox(name);
+      String password = userBox == null ? null : readPassword(userBox);
+      byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+      byte[] salt = Arrays.copyOf(algorithm.hmac(SERVER_SECRET, nameBytes), 16);
+      if (password == null) {
+        // 存在しないユーザー、パスワードファイルなしの場合は、誰にも一致しない擬似パスワードを使う
+        password = Base64.getEncoder().encodeToString(algorithm.hmac(SERVER_SECRET, salt));
+      }
+      return algorithm.derive(password, salt, SCRAM_ITERATIONS);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 

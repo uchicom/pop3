@@ -88,6 +88,9 @@ public class Constants {
   /** CAPAの正規表現(大文字小文字後続スペース) */
   public static String REG_EXP_CAPA = "^[Cc][Aa][Pp][Aa] *$";
 
+  /** AUTH [機構名 [初期応答]] の正規表現(大文字小文字後続スペース) */
+  public static String REG_EXP_AUTH = "^[Aa][Uu][Tt][Hh]( +[^ ]+){0,2} *$";
+
   // POP3 STARTTLS拡張コマンド
   /** STLSの正規表現(大文字小文字後続スペース) */
   public static String REG_EXP_STLS = "^[Ss][Tt][Ll][Ss] *$";
