@@ -400,4 +400,84 @@ class Pop3SessionTest {
     assertThat(run("LIST 1")).isEqualTo("+OK 1 9\r\n");
     assertThat(run("STAT")).isEqualTo("+OK 2 " + (9 + octets(mail2)) + "\r\n");
   }
+
+  @Test
+  void authFailures_disconnectAtLimit() throws Exception {
+    session.setMaxAuthFailures(2);
+
+    assertThat(run("USER alice", "PASS wrong")).isEqualTo("+OK\r\n-NG\r\n");
+    assertThat(session.isFinished()).isFalse();
+    assertThat(run("PASS wrong")).isEqualTo("-NG\r\n");
+    assertThat(session.isFinished()).isTrue();
+  }
+
+  @Test
+  void authFailures_countApopAndSasl() throws Exception {
+    session.setMaxAuthFailures(3);
+
+    run("APOP alice 00", "AUTH SCRAM-SHA-256 *");
+    assertThat(session.isFinished()).isFalse();
+    run("AUTH SCRAM-SHA-256 !!!");
+    assertThat(session.isFinished()).isTrue();
+  }
+
+  @Test
+  void authFailures_successDoesNotDisconnect() throws Exception {
+    session.setMaxAuthFailures(2);
+
+    run("USER alice", "PASS wrong");
+    login();
+    assertThat(session.isFinished()).isFalse();
+  }
+
+  @Test
+  void authFailure_delaysResponse() throws Exception {
+    session.setAuthFailureDelay(100);
+
+    var start = System.nanoTime();
+    run("USER alice", "PASS wrong");
+
+    assertThat((System.nanoTime() - start) / 1_000_000).isGreaterThanOrEqualTo(90);
+  }
+
+  @Test
+  void constantTimeEquals() {
+    assertThat(Pop3Session.constantTimeEquals("secret", "secret")).isTrue();
+    assertThat(Pop3Session.constantTimeEquals("secret", "secreT")).isFalse();
+    assertThat(Pop3Session.constantTimeEquals("secret", "secret2")).isFalse();
+    assertThat(Pop3Session.constantTimeEquals("secret", null)).isFalse();
+    assertThat(Pop3Session.constantTimeEquals(null, null)).isFalse();
+  }
+
+  @Test
+  void auditLog_recordsResultWithoutPassword() throws Exception {
+    var records = new java.util.ArrayList<java.util.logging.LogRecord>();
+    var logger = java.util.logging.Logger.getLogger(Pop3Session.class.getCanonicalName());
+    var handler =
+        new java.util.logging.Handler() {
+          @Override
+          public void publish(java.util.logging.LogRecord record) {
+            records.add(record);
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        };
+    logger.addHandler(handler);
+    try {
+      session.setRemoteAddress("/127.0.0.1:1234");
+      run("USER alice", "PASS wrong-password", "PASS secret");
+    } finally {
+      logger.removeHandler(handler);
+    }
+
+    var messages = records.stream().map(java.util.logging.LogRecord::getMessage).toList();
+    assertThat(messages)
+        .containsExactly(
+            "auth failure method=PASS user=alice remote=/127.0.0.1:1234",
+            "auth success method=PASS user=alice remote=/127.0.0.1:1234");
+  }
 }

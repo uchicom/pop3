@@ -129,4 +129,10 @@ public class Constants {
 
   /** デフォルト1行の最大長(RFC 1939 は 255 オクテット以上を推奨) */
   public static String DEFAULT_MAX_LINE = "1024";
+
+  /** デフォルト認証失敗の上限回数(超過で切断) */
+  public static String DEFAULT_MAX_AUTH_FAILURES = "3";
+
+  /** デフォルト認証失敗時の応答遅延(ミリ秒) */
+  public static String DEFAULT_AUTH_FAILURE_DELAY = "1000";
 }

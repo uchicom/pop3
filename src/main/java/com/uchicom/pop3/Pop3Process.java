@@ -17,6 +17,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.logging.Logger;
@@ -28,6 +29,8 @@ import javax.net.ssl.SSLSocketFactory;
 public class Pop3Process implements ServerProcess {
 
   private static final Logger logger = Logger.getLogger(Pop3Process.class.getCanonicalName());
+
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   /** ファイルとUIDLで使用する日時フォーマット */
   //	private final SimpleDateFormat format = new SimpleDateFormat(Constants.DATE_TIME_MILI_FORMAT);
@@ -56,14 +59,7 @@ public class Pop3Process implements ServerProcess {
   public void execute() {
     logger.info(String.valueOf(socket.getRemoteSocketAddress()));
     // 0.はプロセスごとに変える番号だけど、とくに複数プロセスを持っていないので。
-    String timestamp =
-        "<"
-            + Thread.currentThread().getId()
-            + "."
-            + System.currentTimeMillis()
-            + "@"
-            + parameter.get("host")
-            + ">";
+    String timestamp = newTimestamp(parameter.get("host"));
     BufferedReader br = null;
     PrintStream ps = null;
     Pop3Session session = null;
@@ -75,7 +71,7 @@ public class Pop3Process implements ServerProcess {
       Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
       int maxLine = maxLineLength();
       String line = readLine(br, maxLine);
-      session = new Pop3Session(parameter.getFile("dir"), timestamp);
+      session = newSession(timestamp);
       while (line != null) {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
           if (session.isAuthenticated()) {
@@ -90,7 +86,7 @@ public class Pop3Process implements ServerProcess {
             br = newReader(socket);
             ps = newPrintStream(socket);
             // RFC 2595 4: TLS前に得た情報(USERなど)は破棄する
-            session = new Pop3Session(parameter.getFile("dir"), timestamp);
+            session = newSession(timestamp);
           }
         } else {
           session.setStlsAvailable(hasKeyStore() && isNotSslSocket());
@@ -151,6 +147,37 @@ public class Pop3Process implements ServerProcess {
     LineTooLongException(int maxLine) {
       super("exceeds " + maxLine);
     }
+  }
+
+  /**
+   * APOP用のタイムスタンプを生成する. SecureRandom により推測を困難にし、時刻も含めて一意とする(RFC 1939).
+   *
+   * @param host ホスト名
+   * @return {@code <乱数.時刻@host>} 形式のタイムスタンプ
+   */
+  static String newTimestamp(String host) {
+    byte[] random = new byte[16];
+    RANDOM.nextBytes(random);
+    StringBuilder sb = new StringBuilder("<");
+    for (byte b : random) {
+      sb.append(String.format("%02x", b & 0xFF));
+    }
+    return sb.append('.')
+        .append(System.currentTimeMillis())
+        .append('@')
+        .append(host)
+        .append('>')
+        .toString();
+  }
+
+  private Pop3Session newSession(String timestamp) {
+    Pop3Session session = new Pop3Session(parameter.getFile("dir"), timestamp);
+    session.setMaxAuthFailures(
+        intParameter("maxAuthFailures", Constants.DEFAULT_MAX_AUTH_FAILURES));
+    session.setAuthFailureDelay(
+        intParameter("authFailureDelay", Constants.DEFAULT_AUTH_FAILURE_DELAY));
+    session.setRemoteAddress(String.valueOf(socket.getRemoteSocketAddress()));
+    return session;
   }
 
   /** 読み取りタイムアウト(ミリ秒)を取得する. 0 以下は無制限. */

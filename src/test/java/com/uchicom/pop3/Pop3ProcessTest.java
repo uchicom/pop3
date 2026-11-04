@@ -111,7 +111,15 @@ class Pop3ProcessTest {
 
   @Test
   void greeting_containsHostFromInit() {
-    assertThat(greeting).matches("\\+OK <\\d+\\.\\d+@localhost>.*");
+    assertThat(greeting).matches("\\+OK <[0-9a-f]{32}\\.\\d+@localhost>.*");
+  }
+
+  @Test
+  void newTimestamp_isUnpredictableAndUnique() {
+    var first = Pop3Process.newTimestamp("localhost");
+    var second = Pop3Process.newTimestamp("localhost");
+
+    assertThat(first).matches("<[0-9a-f]{32}\\.\\d+@localhost>").isNotEqualTo(second);
   }
 
   @Test
