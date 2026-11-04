@@ -81,6 +81,35 @@ class Pop3SessionTest {
   }
 
   @Test
+  void pass_nonAsciiPassword() throws Exception {
+    Files.writeString(
+        new File(new File(base, "alice"), Constants.PASSWORD_FILE_NAME).toPath(),
+        "パスワード",
+        StandardCharsets.UTF_8);
+
+    assertThat(run("USER alice", "PASS パスワード")).isEqualTo("+OK\r\n+OK\r\n");
+    assertThat(session.isAuthenticated()).isTrue();
+  }
+
+  @Test
+  void apop_nonAsciiPassword() throws Exception {
+    Files.writeString(
+        new File(new File(base, "alice"), Constants.PASSWORD_FILE_NAME).toPath(),
+        "パスワード",
+        StandardCharsets.UTF_8);
+    var md =
+        MessageDigest.getInstance("MD5")
+            .digest((TIMESTAMP + "パスワード").getBytes(StandardCharsets.UTF_8));
+    var digest = new StringBuilder();
+    for (var b : md) {
+      digest.append(String.format("%02x", b & 0xFF));
+    }
+
+    assertThat(run("APOP alice " + digest)).isEqualTo("+OK\r\n");
+    assertThat(session.isAuthenticated()).isTrue();
+  }
+
+  @Test
   void apop_failure() throws Exception {
     assertThat(run("APOP alice 00", "APOP bob 00")).isEqualTo("-NG\r\n-NG\r\n");
     assertThat(session.isAuthenticated()).isFalse();

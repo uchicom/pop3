@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
@@ -264,6 +265,31 @@ class Pop3ProcessTest {
     assertThat(send("PASS")).startsWith("-");
     assertThat(send("USER alice")).startsWith("+OK");
     assertThat(send("PASS secret")).startsWith("+OK");
+  }
+
+  @Test
+  void forceClose_doesNotThrowFromExecute() throws Exception {
+    tearDown();
+    var parameter = new Pop3Parameter(new String[0]);
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.init();
+    serverSocket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+    client = new Socket(InetAddress.getLoopbackAddress(), serverSocket.getLocalPort());
+    var accepted = serverSocket.accept();
+    var process = new Pop3Process(parameter, accepted);
+    var thrown = new AtomicReference<Throwable>();
+    serverThread = new Thread(process::execute);
+    serverThread.setUncaughtExceptionHandler((t, e) -> thrown.set(e));
+    serverThread.start();
+    client.setSoTimeout(5000);
+    in = new BufferedReader(new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
+    assertThat(in.readLine()).startsWith("+OK");
+
+    process.forceClose();
+    serverThread.join(5000);
+
+    assertThat(serverThread.isAlive()).isFalse();
+    assertThat(thrown.get()).isNull();
   }
 
   /** 自己署名のJKSを生成し、TLS有効なサーバを起動する. */

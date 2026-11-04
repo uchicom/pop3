@@ -523,7 +523,10 @@ public class Pop3Session {
     if (!passwordFile.isFile()) {
       return null;
     }
-    try (BufferedReader reader = newReader(passwordFile)) {
+    // クライアントのコマンド行(UTF-8)と比較するため、メール本文用ではなくUTF-8で読む
+    try (BufferedReader reader =
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(passwordFile), StandardCharsets.UTF_8))) {
       String password = reader.readLine();
       while ("".equals(password)) {
         password = reader.readLine();
@@ -550,7 +553,7 @@ public class Pop3Session {
   }
 
   private static String md5(String value) throws NoSuchAlgorithmException {
-    byte[] bytes = MessageDigest.getInstance("MD5").digest(value.getBytes());
+    byte[] bytes = MessageDigest.getInstance("MD5").digest(value.getBytes(StandardCharsets.UTF_8));
     StringBuilder builder = new StringBuilder(32);
     for (byte b : bytes) {
       builder.append(String.format("%02x", b & 0xFF));
