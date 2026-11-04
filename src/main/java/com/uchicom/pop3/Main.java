@@ -21,13 +21,30 @@ public class Main {
    * @param args パラメータ引数
    */
   public static void main(String[] args) {
+    run(args);
+  }
+
+  /**
+   * サーバを起動する. サーバが停止するまで戻らない.
+   *
+   * @param args パラメータ引数
+   * @return 終了コード(正常終了は0、設定不正は1)
+   */
+  static int run(String[] args) {
     logger.info("start");
-    Pop3Parameter parameter = new Pop3Parameter(args);
-    if (parameter.init()) {
-      server = parameter.createServer();
-      server.execute();
+    try {
+      Pop3Parameter parameter = new Pop3Parameter(args);
+      if (parameter.init()) {
+        server = parameter.createServer();
+        server.execute();
+      }
+    } catch (IllegalArgumentException e) {
+      logger.severe(e.getMessage());
+      System.err.println(e.getMessage());
+      return 1;
     }
     logger.info("end");
+    return 0;
   }
 
   public static void shutdown() {
