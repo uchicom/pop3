@@ -1,6 +1,7 @@
 // (C) 2026 uchicom
 package com.uchicom.pop3;
 
+import static com.uchicom.pop3.Pop3SessionTest.octets;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
@@ -151,7 +152,7 @@ class Pop3ProcessTest {
   void stat() throws Exception {
     login();
 
-    var total = mail1.length() + mail2.length();
+    var total = octets(mail1) + octets(mail2);
     assertThat(send("STAT")).isEqualTo("+OK 2 " + total);
   }
 
@@ -160,14 +161,14 @@ class Pop3ProcessTest {
     login();
 
     assertThat(send("LIST")).startsWith("+OK");
-    assertThat(readMultiLine()).containsExactly("1 " + mail1.length(), "2 " + mail2.length());
+    assertThat(readMultiLine()).containsExactly("1 " + octets(mail1), "2 " + octets(mail2));
   }
 
   @Test
   void listNum() throws Exception {
     login();
 
-    assertThat(send("LIST 2")).isEqualTo("+OK 2 " + mail2.length());
+    assertThat(send("LIST 2")).isEqualTo("+OK 2 " + octets(mail2));
     assertThat(send("LIST 3")).startsWith("-NG");
   }
 
@@ -175,7 +176,7 @@ class Pop3ProcessTest {
   void retrNum() throws Exception {
     login();
 
-    assertThat(send("RETR 1")).isEqualTo("+OK " + mail1.length());
+    assertThat(send("RETR 1")).isEqualTo("+OK " + octets(mail1));
     assertThat(readMultiLine()).containsExactly("Subject: first", "", "body1", "body1-2");
     assertThat(send("RETR 9")).startsWith("-NG");
   }
@@ -203,7 +204,7 @@ class Pop3ProcessTest {
     login();
 
     assertThat(send("DELE 1")).startsWith("+OK");
-    assertThat(send("STAT")).isEqualTo("+OK 1 " + mail2.length());
+    assertThat(send("STAT")).isEqualTo("+OK 1 " + octets(mail2));
     assertThat(send("RETR 1")).startsWith("-NG");
     assertThat(send("QUIT")).startsWith("+OK");
     serverThread.join(5000);
@@ -218,7 +219,7 @@ class Pop3ProcessTest {
 
     assertThat(send("DELE 1")).startsWith("+OK");
     assertThat(send("RSET")).startsWith("+OK");
-    assertThat(send("STAT")).isEqualTo("+OK 2 " + (mail1.length() + mail2.length()));
+    assertThat(send("STAT")).isEqualTo("+OK 2 " + (octets(mail1) + octets(mail2)));
     assertThat(send("QUIT")).startsWith("+OK");
     serverThread.join(5000);
 

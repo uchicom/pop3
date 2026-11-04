@@ -4,6 +4,7 @@ package com.uchicom.pop3;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,7 +99,7 @@ class Pop3SessionTest {
   void stat() throws Exception {
     login();
 
-    assertThat(run("STAT")).isEqualTo("+OK 2 " + (mail1.length() + mail2.length()) + "\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 2 " + (octets(mail1) + octets(mail2)) + "\r\n");
   }
 
   @Test
@@ -106,8 +107,8 @@ class Pop3SessionTest {
     login();
 
     assertThat(run("LIST"))
-        .isEqualTo("+OK\r\n1 " + mail1.length() + "\r\n2 " + mail2.length() + "\r\n.\r\n");
-    assertThat(run("LIST 2")).isEqualTo("+OK 2 " + mail2.length() + "\r\n");
+        .isEqualTo("+OK\r\n1 " + octets(mail1) + "\r\n2 " + octets(mail2) + "\r\n.\r\n");
+    assertThat(run("LIST 2")).isEqualTo("+OK 2 " + octets(mail2) + "\r\n");
     assertThat(run("LIST 3")).isEqualTo("-NG\r\n");
   }
 
@@ -116,7 +117,7 @@ class Pop3SessionTest {
     login();
 
     assertThat(run("RETR 1"))
-        .isEqualTo("+OK " + mail1.length() + "\r\nSubject: first\r\n\r\nbody1\r\nbody1-2\r\n.\r\n");
+        .isEqualTo("+OK " + octets(mail1) + "\r\nSubject: first\r\n\r\nbody1\r\nbody1-2\r\n.\r\n");
     assertThat(run("RETR 9")).isEqualTo("-NG\r\n");
     assertThat(run("RETR"))
         .isEqualTo(
@@ -156,10 +157,10 @@ class Pop3SessionTest {
     login();
 
     assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
-    assertThat(run("STAT")).isEqualTo("+OK 1 " + mail2.length() + "\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 1 " + octets(mail2) + "\r\n");
     assertThat(run("RETR 1", "LIST 1", "UIDL 1")).isEqualTo("-NG\r\n-NG\r\n-NG\r\n");
     assertThat(run("RSET")).isEqualTo("+OK\r\n");
-    assertThat(run("STAT")).isEqualTo("+OK 2 " + (mail1.length() + mail2.length()) + "\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 2 " + (octets(mail1) + octets(mail2)) + "\r\n");
 
     assertThat(run("DELE 1")).isEqualTo("+OK\r\n");
     assertThat(run("DELE 3")).isEqualTo("-NG\r\n");
@@ -201,5 +202,59 @@ class Pop3SessionTest {
     assertThat(run("NOOP")).isEqualTo("+OK\r\n");
     assertThat(run("")).isEmpty();
     assertThat(run("FOO")).isEqualTo(Constants.RECV_NG_CMD_NOT_FOUND + "\r\n");
+  }
+
+  /** 送信されるオクテット数(改行はCRLF換算). */
+  static long octets(File file) throws Exception {
+    long length = 0;
+    for (var line :
+        Files.readString(file.toPath(), StandardCharsets.ISO_8859_1).split("\r\n|\n|\r")) {
+      length += line.length() + 2;
+    }
+    return length;
+  }
+
+  void writeMail(String content) throws Exception {
+    Files.write(mail1.toPath(), content.getBytes(StandardCharsets.ISO_8859_1));
+    assertThat(mail1.setLastModified(1_000_000L)).isTrue();
+  }
+
+  @Test
+  void retr_dotStuffing() throws Exception {
+    writeMail("Subject: dot\n\n.\n.hidden\n..twice\nend\n");
+    login();
+
+    assertThat(run("RETR 1"))
+        .isEqualTo(
+            "+OK "
+                + octets(mail1)
+                + "\r\nSubject: dot\r\n\r\n..\r\n..hidden\r\n...twice\r\nend\r\n.\r\n");
+  }
+
+  @Test
+  void top_dotStuffing() throws Exception {
+    writeMail("Subject: dot\n\n.\n.x\n");
+    login();
+
+    assertThat(run("TOP 1 2")).isEqualTo("+OK\r\nSubject: dot\r\n\r\n..\r\n..x\r\n.\r\n");
+  }
+
+  @Test
+  void retr_preservesBinaryBytes() throws Exception {
+    // 8bit と不正な UTF-8 のバイト列がそのまま通ること
+    writeMail("Subject: bin\n\néÿ\u0080\n");
+    login();
+
+    assertThat(run("RETR 1")).isEqualTo("+OK 21\r\nSubject: bin\r\n\r\néÿ\u0080\r\n.\r\n");
+  }
+
+  @Test
+  void retr_normalizesLineEndingsAndAddsFinalNewline() throws Exception {
+    writeMail("a\r\nb\nc");
+    login();
+
+    assertThat(run("RETR 1")).isEqualTo("+OK 9\r\na\r\nb\r\nc\r\n.\r\n");
+    assertThat(run("LIST 1")).isEqualTo("+OK 1 9\r\n");
+    assertThat(run("STAT")).isEqualTo("+OK 2 " + (9 + octets(mail2)) + "\r\n");
   }
 }
