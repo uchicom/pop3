@@ -80,6 +80,8 @@ public class Pop3Session {
   /**
    * STLSが利用可能かどうかを設定する. CAPAの応答に反映される.
    *
+   * <p>trueの間はTLS確立前とみなし、USER/PASS/APOP/AUTHを拒否する(RFC 2595)。
+   *
    * @param stlsAvailable 利用可能な場合はtrue
    */
   public void setStlsAvailable(boolean stlsAvailable) {
@@ -118,6 +120,13 @@ public class Pop3Session {
     }
     if (Pop3Util.isCapa(line)) {
       capa(out);
+    } else if (stlsAvailable
+        && (Pop3Util.isAuth(line)
+            || Pop3Util.isUser(line)
+            || Pop3Util.isPass(line)
+            || Pop3Util.isApopNameDigest(line))) {
+      // TLS確立前は平文パスワードが流れるおそれがあるため認証を拒否する
+      writeLine(out, Constants.RECV_ERR_AUTH_TLS_REQUIRED);
     } else if (Pop3Util.isAuth(line)) {
       auth(line, out);
     } else if (Pop3Util.isUser(line)) {
@@ -160,13 +169,18 @@ public class Pop3Session {
   void capa(Appendable out) throws IOException {
     writeLine(out, Constants.RECV_OK, " Capability list follows");
     writeLine(out, "TOP");
-    writeLine(out, "USER");
-    writeLine(out, "UIDL");
-    StringBuilder mechanisms = new StringBuilder("SASL");
-    for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
-      mechanisms.append(' ').append(algorithm.getMechanismName());
+    if (!stlsAvailable) {
+      // TLS確立前は認証を受け付けないため、USERとSASLを通知しない
+      writeLine(out, "USER");
     }
-    writeLine(out, mechanisms.toString());
+    writeLine(out, "UIDL");
+    if (!stlsAvailable) {
+      StringBuilder mechanisms = new StringBuilder("SASL");
+      for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
+        mechanisms.append(' ').append(algorithm.getMechanismName());
+      }
+      writeLine(out, mechanisms.toString());
+    }
     if (stlsAvailable) {
       writeLine(out, "STLS");
     }
