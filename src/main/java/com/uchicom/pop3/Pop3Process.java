@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
@@ -66,11 +67,13 @@ public class Pop3Process implements ServerProcess {
     BufferedReader br = null;
     PrintStream ps = null;
     try {
+      socket.setSoTimeout(readTimeout());
       br = newReader(socket);
       ps = newPrintStream(socket);
       // 1接続に対する受付開始
       Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
-      String line = br.readLine();
+      int maxLine = maxLineLength();
+      String line = readLine(br, maxLine);
       Pop3Session session = new Pop3Session(parameter.getFile("dir"), timestamp);
       while (line != null) {
         if (Pop3Util.isStls(line) && hasKeyStore() && isNotSslSocket()) {
@@ -80,6 +83,7 @@ public class Pop3Process implements ServerProcess {
           } else {
             Pop3Util.recieveLine(ps, Constants.RECV_OK);
             socket = startTls();
+            socket.setSoTimeout(readTimeout());
             // 差し替え前の br/ps は close しない(下位の平文ソケットごと閉じてしまうため)。
             // 以降の入出力と終了時の close は TLS 側のストリームで行う
             br = newReader(socket);
@@ -96,8 +100,12 @@ public class Pop3Process implements ServerProcess {
           }
         }
         lastTime = System.currentTimeMillis();
-        line = br.readLine();
+        line = readLine(br, maxLine);
       }
+    } catch (SocketTimeoutException e) {
+      logger.warning("read timeout");
+    } catch (LineTooLongException e) {
+      logger.warning("line too long: " + e.getMessage());
     } catch (IOException e) {
       e.printStackTrace();
     } catch (NoSuchAlgorithmException e) {
@@ -131,6 +139,54 @@ public class Pop3Process implements ServerProcess {
       }
     }
     logger.info("end");
+  }
+
+  /** 行長が上限を超えたことを表す例外(接続を切断する). */
+  static class LineTooLongException extends IOException {
+    LineTooLongException(int maxLine) {
+      super("exceeds " + maxLine);
+    }
+  }
+
+  /** 読み取りタイムアウト(ミリ秒)を取得する. 0 以下は無制限. */
+  int readTimeout() {
+    return intParameter("timeout", Constants.DEFAULT_TIMEOUT);
+  }
+
+  /** 1行の最大長(行終端を除く文字数)を取得する. */
+  int maxLineLength() {
+    return intParameter("maxLine", Constants.DEFAULT_MAX_LINE);
+  }
+
+  private int intParameter(String key, String defaultValue) {
+    String value = parameter.get(key);
+    return Integer.parseInt(value != null ? value : defaultValue);
+  }
+
+  /**
+   * 上限付きで1行読み込む. LF までを1行とし、末尾の CR は取り除く.
+   *
+   * @return 行(行終端を除く)。入力終端なら null
+   * @throws LineTooLongException 行終端を除いた長さが maxLine を超えた場合
+   */
+  static String readLine(BufferedReader br, int maxLine) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    int c;
+    while ((c = br.read()) != -1) {
+      if (c == '\n') {
+        int len = sb.length();
+        if (len > 0 && sb.charAt(len - 1) == '\r') {
+          sb.setLength(len - 1);
+        }
+        return sb.toString();
+      }
+      // 末尾の CR 1文字分の余裕を持たせる
+      if (sb.length() >= maxLine + 1) {
+        throw new LineTooLongException(maxLine);
+      }
+      sb.append((char) c);
+    }
+    return sb.length() > 0 ? sb.toString() : null;
   }
 
   /** 入出力で使用する文字コード. */
