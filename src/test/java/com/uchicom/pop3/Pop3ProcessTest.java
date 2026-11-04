@@ -13,8 +13,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -258,5 +263,109 @@ class Pop3ProcessTest {
     assertThat(send("PASS")).startsWith("-");
     assertThat(send("USER alice")).startsWith("+OK");
     assertThat(send("PASS secret")).startsWith("+OK");
+  }
+
+  /** 自己署名のJKSを生成し、TLS有効なサーバを起動する. */
+  void startTlsServer() throws Exception {
+    tearDown();
+    var keyStore = new File(base, "test.jks");
+    var keytool = new File(System.getProperty("java.home"), "bin/keytool").getAbsolutePath();
+    var process =
+        new ProcessBuilder(
+                keytool,
+                "-genkeypair",
+                "-alias",
+                "test",
+                "-keyalg",
+                "RSA",
+                "-keysize",
+                "2048",
+                "-dname",
+                "CN=localhost",
+                "-validity",
+                "2",
+                "-storetype",
+                "JKS",
+                "-keystore",
+                keyStore.getAbsolutePath(),
+                "-storepass",
+                "changeit",
+                "-keypass",
+                "changeit")
+            .redirectErrorStream(true)
+            .start();
+    process.getInputStream().readAllBytes();
+    assertThat(process.waitFor()).isZero();
+
+    var parameter = new Pop3Parameter(new String[0]);
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.put("keyStoreName", keyStore.getAbsolutePath());
+    parameter.put("keyStorePass", "changeit");
+    parameter.init();
+    startServer(parameter);
+  }
+
+  /** STLS成功後にクライアント側のストリームをTLSに切り替える. */
+  void upgradeClient() throws Exception {
+    var context = SSLContext.getInstance("TLS");
+    context.init(
+        null,
+        new TrustManager[] {
+          new X509TrustManager() {
+            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+            public X509Certificate[] getAcceptedIssuers() {
+              return new X509Certificate[0];
+            }
+          }
+        },
+        null);
+    var ssl =
+        (SSLSocket)
+            context.getSocketFactory().createSocket(client, "localhost", client.getPort(), true);
+    ssl.setUseClientMode(true);
+    ssl.startHandshake();
+    client = ssl;
+    in = new BufferedReader(new InputStreamReader(ssl.getInputStream(), StandardCharsets.UTF_8));
+    out = new PrintStream(ssl.getOutputStream(), true, StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void stls_capaAndLoginWorkAfterHandshake() throws Exception {
+    startTlsServer();
+
+    assertThat(send("CAPA")).startsWith("+OK");
+    assertThat(readMultiLine()).contains("STLS");
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(send("CAPA")).startsWith("+OK");
+    assertThat(readMultiLine()).doesNotContain("STLS");
+    login();
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
+  void stls_discardsUserEnteredBeforeTls() throws Exception {
+    startTlsServer();
+
+    assertThat(send("USER alice")).startsWith("+OK");
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(send("PASS secret")).startsWith("-NG");
+    login();
+  }
+
+  @Test
+  void stls_rejectedAfterAuthentication() throws Exception {
+    startTlsServer();
+
+    login();
+    assertThat(send("STLS")).startsWith("-NG");
+    // 平文のまま継続できる
+    assertThat(send("STAT")).startsWith("+OK 2");
   }
 }
