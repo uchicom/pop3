@@ -343,7 +343,7 @@ public class Pop3Session {
     int fileCnt = 0;
     for (File child : mailList) {
       if (!delList.contains(child)) {
-        fileLength += child.length();
+        fileLength += octets(child);
         fileCnt++;
       }
     }
@@ -360,7 +360,7 @@ public class Pop3Session {
     for (int i = 0; i < mailList.size(); i++) {
       File child = mailList.get(i);
       if (!delList.contains(child)) {
-        writeLine(out, String.valueOf(i + 1), " ", String.valueOf(child.length()));
+        writeLine(out, String.valueOf(i + 1), " ", String.valueOf(octets(child)));
       }
     }
     writeLine(out, Constants.RECV_DATA);
@@ -373,7 +373,7 @@ public class Pop3Session {
       writeLine(out, Constants.RECV_NG);
       return;
     }
-    writeLine(out, Constants.RECV_OK, " ", args[1], " ", String.valueOf(child.length()));
+    writeLine(out, Constants.RECV_OK, " ", args[1], " ", String.valueOf(octets(child)));
   }
 
   void retr(Appendable out) throws IOException {
@@ -397,7 +397,7 @@ public class Pop3Session {
       writeLine(out, Constants.RECV_NG);
       return;
     }
-    writeLine(out, Constants.RECV_OK, " ", String.valueOf(child.length()));
+    writeLine(out, Constants.RECV_OK, " ", String.valueOf(octets(child)));
     writeFile(out, child);
     writeLine(out, Constants.RECV_DATA);
   }
@@ -452,7 +452,7 @@ public class Pop3Session {
       int row = 0;
       boolean messageHead = true;
       while (readLine != null && (messageHead || row <= maxRow)) {
-        writeLine(out, readLine);
+        writeMailLine(out, readLine);
         readLine = reader.readLine();
         if (!messageHead) {
           row++;
@@ -567,17 +567,41 @@ public class Pop3Session {
     return name.length() > 70 ? name.substring(name.length() - 70) : name;
   }
 
+  /** ファイルをバイト単位で扱うため、ISO_8859_1 で読む. */
   private static BufferedReader newReader(File file) throws IOException {
-    return new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+    return new BufferedReader(
+        new InputStreamReader(new FileInputStream(file), StandardCharsets.ISO_8859_1));
+  }
+
+  /** メールを送信する際のオクテット数(改行はCRLF、ドットスタッフィング前)を返す. */
+  private static long octets(File file) throws IOException {
+    long length = 0;
+    try (BufferedReader reader = newReader(file)) {
+      String readLine = reader.readLine();
+      while (readLine != null) {
+        length += readLine.length() + Constants.RECV_LINE_END.length();
+        readLine = reader.readLine();
+      }
+    }
+    return length;
   }
 
   private static void writeFile(Appendable out, File file) throws IOException {
     try (BufferedReader reader = newReader(file)) {
       String readLine = reader.readLine();
       while (readLine != null) {
-        writeLine(out, readLine);
+        writeMailLine(out, readLine);
         readLine = reader.readLine();
       }
+    }
+  }
+
+  /** メールの1行を、行頭が . の場合はドットスタッフィングして出力する(RFC 1939). */
+  private static void writeMailLine(Appendable out, String line) throws IOException {
+    if (line.startsWith(".")) {
+      writeLine(out, ".", line);
+    } else {
+      writeLine(out, line);
     }
   }
 

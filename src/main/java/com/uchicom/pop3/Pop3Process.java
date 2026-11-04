@@ -138,7 +138,8 @@ public class Pop3Process implements ServerProcess {
   }
 
   private static PrintStream newPrintStream(Socket socket) throws IOException {
-    return new PrintStream(socket.getOutputStream(), false, CHARSET);
+    // メール本文をバイト透過で送るため、出力は ISO_8859_1 とする
+    return new PrintStream(socket.getOutputStream(), false, StandardCharsets.ISO_8859_1);
   }
 
   /**
