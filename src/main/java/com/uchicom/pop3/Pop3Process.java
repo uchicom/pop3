@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -61,8 +63,8 @@ public class Pop3Process implements ServerProcess {
     BufferedReader br = null;
     PrintStream ps = null;
     try {
-      br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-      ps = new PrintStream(socket.getOutputStream());
+      br = newReader(socket);
+      ps = newPrintStream(socket);
       // 1接続に対する受付開始
       Pop3Util.recieveLine(ps, Constants.RECV_OK, " ", timestamp);
       String line = br.readLine();
@@ -75,8 +77,10 @@ public class Pop3Process implements ServerProcess {
           } else {
             Pop3Util.recieveLine(ps, Constants.RECV_OK);
             socket = startTls();
-            br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            ps = new PrintStream(socket.getOutputStream());
+            // 差し替え前の br/ps は close しない(下位の平文ソケットごと閉じてしまうため)。
+            // 以降の入出力と終了時の close は TLS 側のストリームで行う
+            br = newReader(socket);
+            ps = newPrintStream(socket);
             // RFC 2595 4: TLS前に得た情報(USERなど)は破棄する
             session = new Pop3Session(parameter.getFile("dir"), timestamp);
           }
@@ -124,6 +128,17 @@ public class Pop3Process implements ServerProcess {
       }
     }
     logger.info("end");
+  }
+
+  /** 入出力で使用する文字コード. */
+  private static final Charset CHARSET = StandardCharsets.UTF_8;
+
+  private static BufferedReader newReader(Socket socket) throws IOException {
+    return new BufferedReader(new InputStreamReader(socket.getInputStream(), CHARSET));
+  }
+
+  private static PrintStream newPrintStream(Socket socket) throws IOException {
+    return new PrintStream(socket.getOutputStream(), false, CHARSET);
   }
 
   /**
