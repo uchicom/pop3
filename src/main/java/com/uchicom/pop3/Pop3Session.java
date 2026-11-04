@@ -36,6 +36,10 @@ public class Pop3Session {
   /** SCRAMの反復回数 */
   private static final int SCRAM_ITERATIONS = 4096;
 
+  private static final String MECHANISM_PLAIN = "PLAIN";
+
+  private static final String MECHANISM_LOGIN = "LOGIN";
+
   /** SCRAMのソルト生成用のプロセス固有の秘密値 */
   private static final byte[] SERVER_SECRET = new byte[32];
 
@@ -66,6 +70,9 @@ public class Pop3Session {
 
   /** STLSが利用可能かどうか(CAPAで通知する) */
   private boolean stlsAvailable;
+
+  /** TLSが確立済みかどうか(AUTH PLAIN/LOGINの受付とCAPAの通知に使う) */
+  private boolean tlsActive;
 
   /** メールボックス内のリスト(認証成功時に設定される) */
   private List<File> mailList;
@@ -138,6 +145,15 @@ public class Pop3Session {
    */
   public void setStlsAvailable(boolean stlsAvailable) {
     this.stlsAvailable = stlsAvailable;
+  }
+
+  /**
+   * TLSが確立済みかどうかを設定する. trueの場合のみAUTH PLAIN/LOGINを受け付け、CAPAで通知する.
+   *
+   * @param tlsActive 確立済みの場合はtrue
+   */
+  public void setTlsActive(boolean tlsActive) {
+    this.tlsActive = tlsActive;
   }
 
   /**
@@ -248,6 +264,9 @@ public class Pop3Session {
       for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
         mechanisms.append(' ').append(algorithm.getMechanismName());
       }
+      if (tlsActive) {
+        mechanisms.append(' ').append(MECHANISM_PLAIN).append(' ').append(MECHANISM_LOGIN);
+      }
       writeLine(out, mechanisms.toString());
     }
     if (stlsAvailable) {
@@ -268,18 +287,21 @@ public class Pop3Session {
       for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
         writeLine(out, algorithm.getMechanismName());
       }
+      if (tlsActive) {
+        writeLine(out, MECHANISM_PLAIN);
+        writeLine(out, MECHANISM_LOGIN);
+      }
       writeLine(out, Constants.RECV_DATA);
       return;
     }
-    ScramAlgorithm algorithm = ScramAlgorithm.find(args[1]);
-    if (algorithm == null) {
+    sasl = newMechanism(args[1]);
+    if (sasl == null) {
       writeLine(out, Constants.RECV_ERR);
       return;
     }
-    sasl = new ScramMechanism(algorithm, this::findScramCredential);
     if (args.length == 2) {
-      // 初期応答なし:空のチャレンジを送る
-      writeLine(out, "+ ");
+      // 初期応答なし:機構ごとのチャレンジ(多くは空)を送る
+      writeLine(out, "+ ", Base64.getEncoder().encodeToString(sasl.initialChallenge()));
     } else {
       authResponse(args[2], out);
     }
@@ -313,6 +335,28 @@ public class Pop3Session {
     } catch (SaslAuthException | IllegalArgumentException e) {
       sasl = null;
       authFailed("AUTH", mechanism.getUser(), out);
+    }
+  }
+
+  /** 機構名からSASL機構を作る. 未対応、またはTLS確立前のPLAIN/LOGINの場合はnull. */
+  private SaslMechanism newMechanism(String name) {
+    if (tlsActive && MECHANISM_PLAIN.equalsIgnoreCase(name)) {
+      return new PlainMechanism(this::verifyPassword);
+    }
+    if (tlsActive && MECHANISM_LOGIN.equalsIgnoreCase(name)) {
+      return new LoginMechanism(this::verifyPassword);
+    }
+    ScramAlgorithm algorithm = ScramAlgorithm.find(name);
+    return algorithm == null ? null : new ScramMechanism(algorithm, this::findScramCredential);
+  }
+
+  /** ユーザー名とパスワードを照合する. ユーザー不在、パスワードファイルなしはfalse. */
+  private boolean verifyPassword(String name, String password) {
+    try {
+      File userBox = findUserBox(name);
+      return userBox != null && constantTimeEquals(password, readPassword(userBox));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 

@@ -6,11 +6,20 @@ import com.uchicom.server.PoolSocketServer;
 import com.uchicom.server.Server;
 import com.uchicom.server.SingleSocketServer;
 import com.uchicom.util.Parameter;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 
 /**
  * @author uchicom: Shigeki Uchiyama
  */
 public class Pop3Parameter extends Parameter {
+
+  /** 全接続で共有する SSLContext(キーストア未指定ならnull) */
+  private SSLContext sslContext;
 
   public Pop3Parameter(String[] args) {
     super(args);
@@ -54,8 +63,60 @@ public class Pop3Parameter extends Parameter {
     if (!is("maxLine")) {
       put("maxLine", Constants.DEFAULT_MAX_LINE);
     }
+    // キーストアの種別(JKS, PKCS12 など)
+    if (!is("keyStoreType")) {
+      put("keyStoreType", Constants.DEFAULT_KEY_STORE_TYPE);
+    }
+    // 有効にするプロトコル(カンマ区切り)
+    if (!is("tlsProtocols")) {
+      put("tlsProtocols", Constants.DEFAULT_TLS_PROTOCOLS);
+    }
+    if (isImplicitTls() && !hasKeyStore()) {
+      throw new IllegalArgumentException("implicitTls requires keyStoreName and keyStorePass");
+    }
+    if (hasKeyStore()) {
+      // 設定の誤りを起動時に検出するため、SSLContext はここで1回だけ作る
+      sslContext = createSslContext();
+    }
 
     return true;
+  }
+
+  /** キーストアが指定されているかどうか. */
+  public boolean hasKeyStore() {
+    return get("keyStoreName") != null && get("keyStorePass") != null;
+  }
+
+  /** 暗黙的TLS(接続直後からTLS)で待ち受けるかどうか. */
+  public boolean isImplicitTls() {
+    return "true".equalsIgnoreCase(get("implicitTls"));
+  }
+
+  /**
+   * 全接続で共有する SSLContext を取得する.
+   *
+   * @return SSLContext。キーストアが指定されていない場合はnull
+   */
+  public SSLContext getSslContext() {
+    return sslContext;
+  }
+
+  private SSLContext createSslContext() {
+    char[] password = get("keyStorePass").toCharArray();
+    try {
+      KeyStore ks = KeyStore.getInstance(get("keyStoreType"));
+      try (FileInputStream fis = new FileInputStream(get("keyStoreName"))) {
+        ks.load(fis, password);
+      }
+      KeyManagerFactory kmf =
+          KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+      kmf.init(ks, password);
+      SSLContext context = SSLContext.getInstance("TLS");
+      context.init(kmf.getKeyManagers(), null, null);
+      return context;
+    } catch (GeneralSecurityException | IOException e) {
+      throw new IllegalArgumentException("failed to load keystore: " + e.getMessage(), e);
+    }
   }
 
   public Server createServer() {

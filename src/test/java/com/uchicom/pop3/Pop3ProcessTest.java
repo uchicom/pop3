@@ -3,6 +3,7 @@ package com.uchicom.pop3;
 
 import static com.uchicom.pop3.Pop3SessionTest.octets;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,6 +18,7 @@ import java.nio.file.Files;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -355,8 +357,14 @@ class Pop3ProcessTest {
 
   /** 自己署名のJKSを生成し、TLS有効なサーバを起動する. */
   void startTlsServer() throws Exception {
+    startTlsServer("JKS", Map.of(), false);
+  }
+
+  /** 自己署名のキーストアを生成し、TLS有効なサーバを起動する. 暗黙的TLSの場合は挨拶の前にハンドシェイクする. */
+  void startTlsServer(String storeType, Map<String, String> options, boolean implicit)
+      throws Exception {
     tearDown();
-    var keyStore = new File(base, "test.jks");
+    var keyStore = new File(base, "test.keystore");
     var keytool = new File(System.getProperty("java.home"), "bin/keytool").getAbsolutePath();
     var process =
         new ProcessBuilder(
@@ -373,7 +381,7 @@ class Pop3ProcessTest {
                 "-validity",
                 "2",
                 "-storetype",
-                "JKS",
+                storeType,
                 "-keystore",
                 keyStore.getAbsolutePath(),
                 "-storepass",
@@ -389,27 +397,51 @@ class Pop3ProcessTest {
     parameter.put("dir", base.getAbsolutePath());
     parameter.put("keyStoreName", keyStore.getAbsolutePath());
     parameter.put("keyStorePass", "changeit");
+    options.forEach(parameter::put);
     parameter.init();
-    startServer(parameter);
+    if (implicit) {
+      startImplicitTlsServer(parameter);
+    } else {
+      startServer(parameter);
+    }
   }
+
+  /** 接続直後にTLSハンドシェイクを行うサーバを起動し、挨拶行を検証する. */
+  void startImplicitTlsServer(Pop3Parameter parameter) throws Exception {
+    connectServer(parameter);
+    upgradeClient();
+    assertThat(in.readLine()).startsWith("+OK");
+  }
+
+  /** サーバを起動し、挨拶行を読まずにクライアントを接続する. */
+  void connectServer(Pop3Parameter parameter) throws Exception {
+    serverSocket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+    client = new Socket(InetAddress.getLoopbackAddress(), serverSocket.getLocalPort());
+    var accepted = serverSocket.accept();
+    serverThread = new Thread(() -> new Pop3Process(parameter, accepted).execute());
+    serverThread.start();
+    client.setSoTimeout(5000);
+  }
+
+  static final String CIPHER_SUITE = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+
+  static final TrustManager[] TRUST_ALL =
+      new TrustManager[] {
+        new X509TrustManager() {
+          public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+          public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+          public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+          }
+        }
+      };
 
   /** STLS成功後にクライアント側のストリームをTLSに切り替える. */
   void upgradeClient() throws Exception {
     var context = SSLContext.getInstance("TLS");
-    context.init(
-        null,
-        new TrustManager[] {
-          new X509TrustManager() {
-            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-
-            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-
-            public X509Certificate[] getAcceptedIssuers() {
-              return new X509Certificate[0];
-            }
-          }
-        },
-        null);
+    context.init(null, TRUST_ALL, null);
     var ssl =
         (SSLSocket)
             context.getSocketFactory().createSocket(client, "localhost", client.getPort(), true);
@@ -451,5 +483,130 @@ class Pop3ProcessTest {
     // TLS確立後は認証できる
     assertThat(send("PASS secret")).startsWith("-ERR");
     login();
+  }
+
+  @Test
+  void stls_authPlainAndLoginAfterTlsOnly() throws Exception {
+    startTlsServer();
+
+    assertThat(send("AUTH PLAIN AGFsaWNlAHNlY3JldA==")).startsWith("-ERR [AUTH]");
+    assertThat(send("AUTH LOGIN")).startsWith("-ERR [AUTH]");
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(send("CAPA")).startsWith("+OK");
+    assertThat(readMultiLine()).anyMatch(l -> l.startsWith("SASL ") && l.endsWith(" PLAIN LOGIN"));
+    assertThat(send("AUTH PLAIN AGFsaWNlAHNlY3JldA==")).startsWith("+OK");
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
+  void stls_authLoginAfterTls() throws Exception {
+    startTlsServer();
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(send("AUTH LOGIN")).isEqualTo("+ VXNlcm5hbWU6");
+    assertThat(send("YWxpY2U=")).isEqualTo("+ UGFzc3dvcmQ6");
+    assertThat(send("c2VjcmV0")).startsWith("+OK");
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
+  void stls_pkcs12KeyStore() throws Exception {
+    startTlsServer("PKCS12", Map.of("keyStoreType", "PKCS12"), false);
+
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+    login();
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
+  void stls_restrictsProtocolsToTls12AndAbove() throws Exception {
+    startTlsServer();
+
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(((SSLSocket) client).getSession().getProtocol()).isIn("TLSv1.3", "TLSv1.2");
+  }
+
+  @Test
+  void stls_serverRejectsClientWithOnlyOldProtocol() throws Exception {
+    startTlsServer();
+    assertThat(send("STLS")).startsWith("+OK");
+
+    var context = SSLContext.getInstance("TLS");
+    context.init(null, TRUST_ALL, null);
+    var ssl =
+        (SSLSocket)
+            context.getSocketFactory().createSocket(client, "localhost", client.getPort(), true);
+    ssl.setUseClientMode(true);
+    ssl.setEnabledProtocols(new String[] {"TLSv1.1"});
+
+    assertThrows(IOException.class, ssl::startHandshake);
+  }
+
+  @Test
+  void stls_cipherSuitesCanBeSpecified() throws Exception {
+    startTlsServer("JKS", Map.of("tlsProtocols", "TLSv1.2", "cipherSuites", CIPHER_SUITE), false);
+
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    var session = ((SSLSocket) client).getSession();
+    assertThat(session.getProtocol()).isEqualTo("TLSv1.2");
+    assertThat(session.getCipherSuite()).isEqualTo(CIPHER_SUITE);
+  }
+
+  @Test
+  void implicitTls_greetsOverTlsAndAcceptsAuth() throws Exception {
+    startTlsServer("JKS", Map.of("implicitTls", "true"), true);
+
+    assertThat(send("CAPA")).startsWith("+OK");
+    var capa = readMultiLine();
+    assertThat(capa).doesNotContain("STLS");
+    assertThat(capa).anyMatch(l -> l.startsWith("SASL ") && l.endsWith(" PLAIN LOGIN"));
+    assertThat(send("STLS")).startsWith("-ERR");
+    assertThat(send("AUTH PLAIN AGFsaWNlAHNlY3JldA==")).startsWith("+OK");
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
+  void implicitTls_plainTextClientIsDisconnected() throws Exception {
+    startTlsServer();
+    tearDown();
+    var parameter = new Pop3Parameter(new String[0]);
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.put("keyStoreName", new File(base, "test.keystore").getAbsolutePath());
+    parameter.put("keyStorePass", "changeit");
+    parameter.put("implicitTls", "true");
+    parameter.init();
+    connectServer(parameter);
+    client.getOutputStream().write("USER alice\r\n".getBytes(StandardCharsets.UTF_8));
+    client.getOutputStream().flush();
+
+    // ハンドシェイクできないため、平文の+OKは返らず切断される
+    try {
+      var reply = client.getInputStream().readAllBytes();
+      assertThat(new String(reply, StandardCharsets.ISO_8859_1)).doesNotContain("+OK");
+    } catch (IOException e) {
+      // 切断(リセット)でもよい
+    }
+    serverThread.join(5000);
+    assertThat(serverThread.isAlive()).isFalse();
+  }
+
+  @Test
+  void sslContext_isCreatedOnceAndShared() throws Exception {
+    startTlsServer();
+    var parameter = new Pop3Parameter(new String[0]);
+    parameter.put("dir", base.getAbsolutePath());
+    parameter.put("keyStoreName", new File(base, "test.keystore").getAbsolutePath());
+    parameter.put("keyStorePass", "changeit");
+    parameter.init();
+
+    assertThat(parameter.getSslContext()).isNotNull().isSameAs(parameter.getSslContext());
   }
 }
