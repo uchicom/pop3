@@ -59,6 +59,8 @@ mailbox/
 
 AUTH PLAIN / LOGIN は TLS 確立後(STLS 後、または暗黙的 TLS)のみ受け付け、CAPA にも TLS 下でのみ通知する。
 
+TLS 確立後は `SCRAM-*-PLUS`(チャネルバインディング)も提示する。対応するのは `tls-server-end-point`(RFC 5929)のみで、サーバー証明書のハッシュを使う(署名が MD5 / SHA-1 の場合は SHA-256)。`Ed25519` / `Ed448` 証明書ではハッシュが定義されないため提示しない。`tls-unique` と `tls-exporter`(RFC 9266)は Java の標準 API で必要な値を取得できないため未対応。
+
 ```
 mvn exec:java "-Dexec.mainClass=com.uchicom.pop3.Main" -Dexec.args="-port 995 -implicitTls true -keyStoreName keystore.p12 -keyStoreType PKCS12 -keyStorePass changeit"
 ```

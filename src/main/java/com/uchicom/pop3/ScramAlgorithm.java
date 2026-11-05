@@ -22,6 +22,9 @@ public enum ScramAlgorithm {
   SHA_224("SCRAM-SHA-224", "SHA-224", "HmacSHA224"),
   SHA_1("SCRAM-SHA-1", "SHA-1", "HmacSHA1");
 
+  /** チャネルバインディング対応機構名の接尾辞 */
+  public static final String PLUS_SUFFIX = "-PLUS";
+
   private final String mechanismName;
   private final String digestName;
   private final String macName;
@@ -36,8 +39,12 @@ public enum ScramAlgorithm {
     return mechanismName;
   }
 
+  public String getPlusMechanismName() {
+    return mechanismName + PLUS_SUFFIX;
+  }
+
   /**
-   * 機構名からアルゴリズムを探す.
+   * 機構名からアルゴリズムを探す. -PLUS付きの名前は対象外.
    *
    * @param name SASL機構名(大文字小文字を区別しない)
    * @return アルゴリズム。ない場合はnull

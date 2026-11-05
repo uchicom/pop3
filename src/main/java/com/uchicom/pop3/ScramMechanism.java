@@ -7,7 +7,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * SCRAM認証機構(RFC 5802)のサーバー側. チャネルバインディング(-PLUS)は未対応.
+ * SCRAM認証機構(RFC 5802)のサーバー側. チャネルバインディング(-PLUS)は tls-server-end-point のみ対応.
  *
  * @author uchicom: Shigeki Uchiyama
  */
@@ -24,6 +24,8 @@ public class ScramMechanism implements SaslMechanism {
 
   private final ScramAlgorithm algorithm;
   private final ScramCredentialSource source;
+  private final boolean plus;
+  private final byte[] bindingData;
   private State state = State.CLIENT_FIRST;
   private String user;
   private String gs2Header;
@@ -33,8 +35,23 @@ public class ScramMechanism implements SaslMechanism {
   private ScramCredential credential;
 
   public ScramMechanism(ScramAlgorithm algorithm, ScramCredentialSource source) {
+    this(algorithm, source, false, null);
+  }
+
+  /**
+   * コンストラクタ.
+   *
+   * @param algorithm アルゴリズム
+   * @param source 資格情報の取得元
+   * @param plus -PLUS機構かどうか
+   * @param bindingData tls-server-end-pointのバインディングデータ。PLUSを提示できない場合はnull
+   */
+  public ScramMechanism(
+      ScramAlgorithm algorithm, ScramCredentialSource source, boolean plus, byte[] bindingData) {
     this.algorithm = algorithm;
     this.source = source;
+    this.plus = plus;
+    this.bindingData = bindingData;
   }
 
   @Override
@@ -73,14 +90,26 @@ public class ScramMechanism implements SaslMechanism {
     if (parts.length < 3) {
       throw new SaslAuthException("invalid client-first");
     }
-    if (!"n".equals(parts[0]) && !"y".equals(parts[0])) {
-      // "p=..." はチャネルバインディング要求であり未対応
-      throw new SaslAuthException("channel binding not supported");
+    String flag = parts[0];
+    if (flag.startsWith("p=")) {
+      // チャネルバインディング要求はPLUS機構の tls-server-end-point のみ受理する
+      if (!plus || !flag.equals("p=" + ChannelBinding.TYPE)) {
+        throw new SaslAuthException("channel binding not supported");
+      }
+    } else if (plus) {
+      throw new SaslAuthException("channel binding required");
+    } else if ("y".equals(flag)) {
+      // PLUSを提示しているのにyを送るのはダウングレード
+      if (bindingData != null) {
+        throw new SaslAuthException("channel binding downgrade");
+      }
+    } else if (!"n".equals(flag)) {
+      throw new SaslAuthException("invalid client-first");
     }
     if (!parts[1].isEmpty()) {
       throw new SaslAuthException("authzid not supported");
     }
-    gs2Header = parts[0] + ",,";
+    gs2Header = flag + ",,";
     clientFirstBare = parts[2];
     String[] attrs = clientFirstBare.split(",");
     if (attrs.length < 2 || !attrs[0].startsWith("n=") || !attrs[1].startsWith("r=")) {
@@ -118,10 +147,15 @@ public class ScramMechanism implements SaslMechanism {
     }
     byte[] proof;
     try {
-      String channelBinding =
-          new String(
-              Base64.getDecoder().decode(attrs[0].substring(2)), StandardCharsets.ISO_8859_1);
-      if (!gs2Header.equals(channelBinding)) {
+      byte[] channelBinding = Base64.getDecoder().decode(attrs[0].substring(2));
+      byte[] expected = gs2Header.getBytes(StandardCharsets.ISO_8859_1);
+      if (plus) {
+        byte[] header = expected;
+        expected = new byte[header.length + bindingData.length];
+        System.arraycopy(header, 0, expected, 0, header.length);
+        System.arraycopy(bindingData, 0, expected, header.length, bindingData.length);
+      }
+      if (!MessageDigest.isEqual(expected, channelBinding)) {
         throw new SaslAuthException("channel binding mismatch");
       }
       proof = Base64.getDecoder().decode(message.substring(proofIndex + 3));

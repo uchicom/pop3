@@ -468,6 +468,78 @@ class Pop3ProcessTest {
   }
 
   @Test
+  void stls_capaAdvertisesScramPlusOnlyAfterTls() throws Exception {
+    startTlsServer();
+
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+
+    assertThat(send("CAPA")).startsWith("+OK");
+    assertThat(readMultiLine())
+        .anyMatch(l -> l.startsWith("SASL ") && l.contains(" SCRAM-SHA-256-PLUS "));
+  }
+
+  @Test
+  void stls_rejectsScramPlusBeforeTls() throws Exception {
+    startTlsServer();
+
+    assertThat(send("AUTH SCRAM-SHA-256-PLUS")).startsWith("-ERR [AUTH]");
+  }
+
+  @Test
+  void stls_authScramPlusWithServerCertificateHash() throws Exception {
+    startTlsServer();
+    assertThat(send("STLS")).startsWith("+OK");
+    upgradeClient();
+    var certificate = ((SSLSocket) client).getSession().getPeerCertificates()[0];
+    var binding = ChannelBinding.serverEndPoint(certificate);
+    var gs2Header = ("p=" + ChannelBinding.TYPE + ",,").getBytes(StandardCharsets.US_ASCII);
+    var channelBinding = new byte[gs2Header.length + binding.length];
+    System.arraycopy(gs2Header, 0, channelBinding, 0, gs2Header.length);
+    System.arraycopy(binding, 0, channelBinding, gs2Header.length, binding.length);
+
+    var clientFirstBare = "n=alice,r=clientnonce";
+    var encoder = java.util.Base64.getEncoder();
+    var reply =
+        send(
+            "AUTH SCRAM-SHA-256-PLUS "
+                + encoder.encodeToString(
+                    (new String(gs2Header, StandardCharsets.US_ASCII) + clientFirstBare)
+                        .getBytes(StandardCharsets.UTF_8)));
+    assertThat(reply).startsWith("+ ");
+    var serverFirst =
+        new String(
+            java.util.Base64.getDecoder().decode(reply.substring(2).trim()),
+            StandardCharsets.UTF_8);
+    var attrs = serverFirst.split(",");
+    var nonce = attrs[0].substring(2);
+    var salt = java.util.Base64.getDecoder().decode(attrs[1].substring(2));
+    var iterations = Integer.parseInt(attrs[2].substring(2));
+    var algorithm = ScramAlgorithm.SHA_256;
+    var credential = algorithm.derive("secret", salt, iterations);
+    var saltedPassword = algorithm.hi("secret".getBytes(StandardCharsets.UTF_8), salt, iterations);
+    var clientKey = algorithm.hmac(saltedPassword, "Client Key".getBytes());
+    var withoutProof = "c=" + encoder.encodeToString(channelBinding) + ",r=" + nonce;
+    var signature =
+        algorithm.hmac(
+            credential.storedKey(),
+            (clientFirstBare + "," + serverFirst + "," + withoutProof).getBytes());
+    var proof = new byte[clientKey.length];
+    for (int i = 0; i < proof.length; i++) {
+      proof[i] = (byte) (clientKey[i] ^ signature[i]);
+    }
+
+    assertThat(
+            send(
+                encoder.encodeToString(
+                    (withoutProof + ",p=" + encoder.encodeToString(proof))
+                        .getBytes(StandardCharsets.UTF_8))))
+        .startsWith("+ ");
+    assertThat(send("")).startsWith("+OK");
+    assertThat(send("STAT")).startsWith("+OK 2");
+  }
+
+  @Test
   void stls_rejectsAuthenticationBeforeTls() throws Exception {
     startTlsServer();
 
