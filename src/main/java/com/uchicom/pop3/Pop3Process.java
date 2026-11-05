@@ -12,6 +12,7 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +35,9 @@ public class Pop3Process implements ServerProcess {
 
   /** socket の close/null 化を排他するロック(socket 自体は null になるためロックに使えない) */
   private final Object lock = new Object();
+
+  /** tls-server-end-pointのバインディングデータ(TLS確立後。提示できない場合はnull) */
+  private byte[] channelBindingData;
 
   /** 最終処理時刻 */
   private long lastTime = System.currentTimeMillis();
@@ -90,6 +94,7 @@ public class Pop3Process implements ServerProcess {
         } else {
           session.setStlsAvailable(hasKeyStore() && isNotSslSocket());
           session.setTlsActive(!isNotSslSocket());
+          session.setChannelBindingData(channelBindingData);
           session.execute(line, ps);
           ps.flush();
           if (session.isFinished()) {
@@ -276,8 +281,18 @@ public class Pop3Process implements ServerProcess {
       sslSocket.setEnabledCipherSuites(cipherSuites.split(" *, *"));
     }
     sslSocket.startHandshake();
+    channelBindingData = channelBindingData(sslSocket);
 
     return sslSocket;
+  }
+
+  /** サーバー証明書から tls-server-end-point のバインディングデータを求める. 求められない場合はnull. */
+  private byte[] channelBindingData(SSLSocket sslSocket) {
+    Certificate[] certificates = sslSocket.getSession().getLocalCertificates();
+    if (certificates == null || certificates.length == 0) {
+      return null;
+    }
+    return ChannelBinding.serverEndPoint(certificates[0]);
   }
 
   /** 指定プロトコルのうち、実行環境が対応するものを返す. 1つも対応しない場合は例外. */
