@@ -3,9 +3,14 @@ package com.uchicom.pop3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.uchicom.server.MultiSocketServer;
+import com.uchicom.server.PoolSocketServer;
+import com.uchicom.server.SingleSocketServer;
+import com.uchicom.server.VirtualSocketServer;
 import org.junit.jupiter.api.Test;
 
 /** Pop3Parameter のテスト. */
@@ -56,6 +61,38 @@ class Pop3ParameterTest {
         new Pop3Parameter(new String[] {"-keyStoreName", "no-such-file", "-keyStorePass", "x"});
 
     assertThrows(IllegalArgumentException.class, parameter::init);
+  }
+
+  @Test
+  void createServer_virtual() {
+    var parameter = new Pop3Parameter(new String[] {"-type", "virtual"});
+    parameter.init();
+
+    assertInstanceOf(VirtualSocketServer.class, parameter.createServer());
+  }
+
+  @Test
+  void createServer_pool() {
+    var parameter = new Pop3Parameter(new String[] {"-type", "pool"});
+    parameter.init();
+
+    assertInstanceOf(PoolSocketServer.class, parameter.createServer());
+  }
+
+  @Test
+  void createServer_multi() {
+    var parameter = new Pop3Parameter(new String[] {"-type", "multi"});
+    parameter.init();
+
+    assertInstanceOf(MultiSocketServer.class, parameter.createServer());
+  }
+
+  @Test
+  void createServer_single() {
+    var parameter = new Pop3Parameter(new String[] {"-type", "single"});
+    parameter.init();
+
+    assertInstanceOf(SingleSocketServer.class, parameter.createServer());
   }
 
   @Test
