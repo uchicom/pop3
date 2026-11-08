@@ -22,11 +22,14 @@ mvn exec:java "-Dexec.mainClass=com.uchicom.pop3.Main" -Dexec.args="-port 8110 -
 | オプション | 既定値 | 説明 |
 | --- | --- | --- |
 | `-dir` | `mailbox` | メールボックスの基準フォルダ |
-| `-type` | `pool` | サーバ種別。`single`(単一スレッドで逐次処理)/ `multi`(接続ごとにスレッド生成)/ `pool`(スレッドプール)/ `virtual`(接続ごとに仮想スレッド生成。同時接続数は無制限で `-pool` は無効)。それ以外はエラーメッセージを出して起動しない |
+| `-type` | `pool` | サーバ種別。`single`(単一スレッドで逐次処理)/ `multi`(接続ごとにスレッド生成)/ `pool`(スレッドプール)/ `virtual`(接続ごとに仮想スレッド生成。`-pool` は無効。同時接続数は `-maxConnection` で制限できる)。それ以外はエラーメッセージを出して起動しない |
 | `-host` | `localhost` | ホスト名(greeting のタイムスタンプに使用) |
 | `-port` | `8110` | 待ち受けポート |
 | `-back` | `10` | 受信する接続要求キューの最大長 |
 | `-pool` | `10` | `pool` 時のスレッド数 |
+| `-queue` | 無制限 | `pool` 時、スレッド待ちの接続キューの最大長(server 0.4.1〜) |
+| `-queueTimeout` | `-timeout` の値 | `pool` 時、キューで待てる最大時間(ミリ秒)。超えた接続は切断する(server 0.4.1〜) |
+| `-maxConnection` | 無制限 | 同時接続数の上限。超えた接続は拒否する(server 0.4.1〜) |
 | `-timeout` | `60000` | 読み取りタイムアウト(ミリ秒) |
 | `-maxLine` | `1024` | 1行の最大長 |
 
