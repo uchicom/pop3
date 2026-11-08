@@ -4,8 +4,12 @@ package com.uchicom.pop3;
 import com.uchicom.server.ServerProcess;
 import com.uchicom.util.Parameter;
 import java.io.BufferedReader;
+import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -40,7 +44,7 @@ public class Pop3Process implements ServerProcess {
   private byte[] channelBindingData;
 
   /** 最終処理時刻 */
-  private long lastTime = System.currentTimeMillis();
+  private volatile long lastTime = System.currentTimeMillis();
 
   /**
    * コンストラクタ.
@@ -101,7 +105,7 @@ public class Pop3Process implements ServerProcess {
             break;
           }
         }
-        lastTime = System.currentTimeMillis();
+        touch();
         line = readLine(br, maxLine);
       }
     } catch (SocketTimeoutException e) {
@@ -227,13 +231,69 @@ public class Pop3Process implements ServerProcess {
   /** 入出力で使用する文字コード. */
   private static final Charset CHARSET = StandardCharsets.UTF_8;
 
-  private static BufferedReader newReader(Socket socket) throws IOException {
-    return new BufferedReader(new InputStreamReader(socket.getInputStream(), CHARSET));
+  private BufferedReader newReader(Socket socket) throws IOException {
+    return new BufferedReader(
+        new InputStreamReader(
+            new ActivityInputStream(socket.getInputStream(), this::touch), CHARSET));
   }
 
-  private static PrintStream newPrintStream(Socket socket) throws IOException {
+  private PrintStream newPrintStream(Socket socket) throws IOException {
     // メール本文をバイト透過で送るため、出力は ISO_8859_1 とする
-    return new PrintStream(socket.getOutputStream(), false, StandardCharsets.ISO_8859_1);
+    return new PrintStream(
+        new ActivityOutputStream(socket.getOutputStream(), this::touch),
+        false,
+        StandardCharsets.ISO_8859_1);
+  }
+
+  /** 最終処理時刻を現在時刻に更新する. 監視スレッドが参照するため、通信のたびに呼び出す. */
+  private void touch() {
+    lastTime = System.currentTimeMillis();
+  }
+
+  /** 読み取りのたびに通信があったことを通知する入力ストリーム. */
+  static class ActivityInputStream extends FilterInputStream {
+    private final Runnable onActivity;
+
+    ActivityInputStream(InputStream in, Runnable onActivity) {
+      super(in);
+      this.onActivity = onActivity;
+    }
+
+    @Override
+    public int read() throws IOException {
+      int c = super.read();
+      onActivity.run();
+      return c;
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+      int n = super.read(b, off, len);
+      onActivity.run();
+      return n;
+    }
+  }
+
+  /** 書き込みのたびに通信があったことを通知する出力ストリーム. 大きなメールの送信中も最終処理時刻を更新するために使う. */
+  static class ActivityOutputStream extends FilterOutputStream {
+    private final Runnable onActivity;
+
+    ActivityOutputStream(OutputStream out, Runnable onActivity) {
+      super(out);
+      this.onActivity = onActivity;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+      out.write(b);
+      onActivity.run();
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+      out.write(b, off, len);
+      onActivity.run();
+    }
   }
 
   /**
