@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,6 +72,9 @@ public class Pop3Session {
 
   /** STLSが利用可能かどうか(CAPAで通知する) */
   private boolean stlsAvailable;
+
+  /** tls-server-end-pointのバインディングデータ(PLUSを提示しない場合はnull) */
+  private byte[] channelBindingData;
 
   /** TLSが確立済みかどうか(AUTH PLAIN/LOGINの受付とCAPAの通知に使う) */
   private boolean tlsActive;
@@ -146,6 +150,19 @@ public class Pop3Session {
    */
   public void setStlsAvailable(boolean stlsAvailable) {
     this.stlsAvailable = stlsAvailable;
+  }
+
+  /**
+   * tls-server-end-pointのバインディングデータを設定する. TLS確立後かつ設定済みの場合のみSCRAM-*-PLUSを提示する.
+   *
+   * @param channelBindingData サーバー証明書のハッシュ。提示できない場合はnull
+   */
+  public void setChannelBindingData(byte[] channelBindingData) {
+    this.channelBindingData = channelBindingData;
+  }
+
+  private boolean plusAvailable() {
+    return tlsActive && channelBindingData != null;
   }
 
   /**
@@ -264,6 +281,9 @@ public class Pop3Session {
       StringBuilder mechanisms = new StringBuilder("SASL");
       for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
         mechanisms.append(' ').append(algorithm.getMechanismName());
+        if (plusAvailable()) {
+          mechanisms.append(' ').append(algorithm.getPlusMechanismName());
+        }
       }
       if (tlsActive) {
         mechanisms.append(' ').append(MECHANISM_PLAIN).append(' ').append(MECHANISM_LOGIN);
@@ -287,6 +307,9 @@ public class Pop3Session {
       writeLine(out, Constants.RECV_OK);
       for (ScramAlgorithm algorithm : ScramAlgorithm.values()) {
         writeLine(out, algorithm.getMechanismName());
+        if (plusAvailable()) {
+          writeLine(out, algorithm.getPlusMechanismName());
+        }
       }
       if (tlsActive) {
         writeLine(out, MECHANISM_PLAIN);
@@ -347,8 +370,16 @@ public class Pop3Session {
     if (tlsActive && MECHANISM_LOGIN.equalsIgnoreCase(name)) {
       return new LoginMechanism(this::verifyPassword);
     }
-    ScramAlgorithm algorithm = ScramAlgorithm.find(name);
-    return algorithm == null ? null : new ScramMechanism(algorithm, this::findScramCredential);
+    boolean plus = name.toUpperCase(Locale.ROOT).endsWith(ScramAlgorithm.PLUS_SUFFIX);
+    if (plus && !plusAvailable()) {
+      return null;
+    }
+    ScramAlgorithm algorithm =
+        ScramAlgorithm.find(
+            plus ? name.substring(0, name.length() - ScramAlgorithm.PLUS_SUFFIX.length()) : name);
+    return algorithm == null
+        ? null
+        : new ScramMechanism(algorithm, this::findScramCredential, plus, channelBindingData);
   }
 
   /** ユーザー名とパスワードを照合する. ユーザー不在、パスワードファイルなしはfalse. */

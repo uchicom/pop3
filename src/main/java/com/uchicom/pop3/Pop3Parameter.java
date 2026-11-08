@@ -5,6 +5,7 @@ import com.uchicom.server.MultiSocketServer;
 import com.uchicom.server.PoolSocketServer;
 import com.uchicom.server.Server;
 import com.uchicom.server.SingleSocketServer;
+import com.uchicom.server.VirtualSocketServer;
 import com.uchicom.util.Parameter;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -133,6 +134,14 @@ public class Pop3Parameter extends Parameter {
       case "pool":
         server =
             new PoolSocketServer(
+                this,
+                (a, b) -> {
+                  return new Pop3Process(a, b);
+                });
+        break;
+      case "virtual":
+        server =
+            new VirtualSocketServer(
                 this,
                 (a, b) -> {
                   return new Pop3Process(a, b);

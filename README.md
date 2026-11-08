@@ -22,11 +22,14 @@ mvn exec:java "-Dexec.mainClass=com.uchicom.pop3.Main" -Dexec.args="-port 8110 -
 | オプション | 既定値 | 説明 |
 | --- | --- | --- |
 | `-dir` | `mailbox` | メールボックスの基準フォルダ |
-| `-type` | `pool` | サーバ種別。`single`(単一スレッドで逐次処理)/ `multi`(接続ごとにスレッド生成)/ `pool`(スレッドプール)。それ以外はエラーメッセージを出して起動しない |
+| `-type` | `pool` | サーバ種別。`single`(単一スレッドで逐次処理)/ `multi`(接続ごとにスレッド生成)/ `pool`(スレッドプール)/ `virtual`(接続ごとに仮想スレッド生成。`-pool` は無効。同時接続数は `-maxConnection` で制限できる)。それ以外はエラーメッセージを出して起動しない |
 | `-host` | `localhost` | ホスト名(greeting のタイムスタンプに使用) |
 | `-port` | `8110` | 待ち受けポート |
 | `-back` | `10` | 受信する接続要求キューの最大長 |
 | `-pool` | `10` | `pool` 時のスレッド数 |
+| `-queue` | 無制限 | `pool` 時、スレッド待ちの接続キューの最大長(server 0.4.1〜) |
+| `-queueTimeout` | `-timeout` の値 | `pool` 時、キューで待てる最大時間(ミリ秒)。超えた接続は切断する(server 0.4.1〜) |
+| `-maxConnection` | 無制限 | 同時接続数の上限。超えた接続は拒否する(server 0.4.1〜) |
 | `-timeout` | `60000` | 読み取りタイムアウト(ミリ秒) |
 | `-maxLine` | `1024` | 1行の最大長 |
 
@@ -58,6 +61,8 @@ mailbox/
 | `-implicitTls` | `false` | `true` で接続直後から TLS で待ち受ける(995番など。`-port 995`)。キーストアが必須 |
 
 AUTH PLAIN / LOGIN は TLS 確立後(STLS 後、または暗黙的 TLS)のみ受け付け、CAPA にも TLS 下でのみ通知する。
+
+TLS 確立後は `SCRAM-*-PLUS`(チャネルバインディング)も提示する。対応するのは `tls-server-end-point`(RFC 5929)のみで、サーバー証明書のハッシュを使う(署名が MD5 / SHA-1 の場合は SHA-256)。`Ed25519` / `Ed448` 証明書ではハッシュが定義されないため提示しない。`tls-unique` と `tls-exporter`(RFC 9266)は Java の標準 API で必要な値を取得できないため未対応。
 
 ```
 mvn exec:java "-Dexec.mainClass=com.uchicom.pop3.Main" -Dexec.args="-port 995 -implicitTls true -keyStoreName keystore.p12 -keyStoreType PKCS12 -keyStorePass changeit"
